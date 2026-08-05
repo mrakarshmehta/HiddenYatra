@@ -1,0 +1,71 @@
+# ═══════════════════════════════════════════
+# HiddenYatra — Docker Ignore
+# Prevent unnecessary files from entering the Docker build context
+# ═══════════════════════════════════════════
+
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Version Control
+.git
+.gitignore
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# Database files
+*.db
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docs & scripts not needed at runtime
+docs/
+deploy/
+tests/
+scripts/seed/
+scripts/tools/
+scripts/legacy/
+scripts/migrations/migrate_*.py
+*.pptx
+
+# Debug/test scripts
+debug_*.py
+test_*.py
+compare_*.py
+verify_*.py
+fix_*.py
+migrate_*.py
+setup_*.py
+e2e_verify.py
+final_verification.py
+
+# Docker files (no inception)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Gemini
+.gemini/
+.agents/
+
+# Logs
+*.log
+
+# Render
+render.yaml

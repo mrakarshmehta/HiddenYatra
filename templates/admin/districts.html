@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}District Management — Admin — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div style="display:flex;min-height:calc(100vh - var(--navbar-height));">
+
+  <!-- Sidebar -->
+  <aside style="width:240px;background:var(--bg-card);border-right:1px solid var(--border-color);padding:var(--space-xl) 0;flex-shrink:0;">
+    <div style="padding:0 var(--space-lg) var(--space-lg);">
+      <h3 style="font-family:var(--font-heading);font-size:1rem;display:flex;align-items:center;gap:8px;">
+        📍 Hidden<strong style="color:var(--primary);">Yatra</strong>
+      </h3>
+      <span style="font-size:0.75rem;color:var(--text-muted);">Admin Dashboard</span>
+    </div>
+    <nav style="display:flex;flex-direction:column;gap:2px;padding:0 var(--space-sm);">
+      <a href="{{ url_for('admin.dashboard') }}" style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:var(--radius-md);font-size:0.85rem;color:var(--text-secondary);text-decoration:none;">📊 Dashboard</a>
+      <a href="{{ url_for('admin.districts_manager') }}" style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:var(--radius-md);font-size:0.85rem;color:var(--primary);background:var(--primary-50);text-decoration:none;font-weight:600;">🗺️ Districts</a>
+      <a href="{{ url_for('admin.trending_manager') }}" style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:var(--radius-md);font-size:0.85rem;color:var(--text-secondary);text-decoration:none;">🔥 Trending</a>
+      <a href="{{ url_for('admin.hero_media_manager') }}" style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:var(--radius-md);font-size:0.85rem;color:var(--text-secondary);text-decoration:none;">🖼️ Hero Media</a>
+      <a href="{{ url_for('admin.add_place_view') }}" style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:var(--radius-md);font-size:0.85rem;color:var(--text-secondary);text-decoration:none;">➕ Add Place</a>
+      <a href="{{ url_for('admin.submissions') }}" style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:var(--radius-md);font-size:0.85rem;color:var(--text-secondary);text-decoration:none;">📝 Submissions</a>
+    </nav>
+  </aside>
+
+  <!-- Main Content -->
+  <main style="flex:1;padding:var(--space-xl) var(--space-2xl);overflow-y:auto;">
+
+    <h1 style="font-family:var(--font-heading);font-size:1.8rem;margin-bottom:4px;">🗺️ District <span class="text-gradient-saffron">Manager</span></h1>
+    <p style="color:var(--text-muted);margin-bottom:var(--space-xl);">Manage districts, set order, upload covers, mark featured. Changes reflect instantly on homepage and district pages.</p>
+
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:var(--space-md);margin-bottom:var(--space-xl);">
+      <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:var(--space-lg);text-align:center;">
+        <div style="font-size:2rem;font-weight:800;font-family:var(--font-heading);color:var(--primary);">{{ districts|length }}</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);">Total Districts</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:var(--space-lg);text-align:center;">
+        <div style="font-size:2rem;font-weight:800;font-family:var(--font-heading);color:var(--accent-emerald);">{{ districts|selectattr('is_featured')|list|length }}</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);">Featured</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:var(--space-lg);text-align:center;">
+        <div style="font-size:2rem;font-weight:800;font-family:var(--font-heading);color:var(--text-muted);">{{ districts|rejectattr('is_visible')|list|length }}</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);">Hidden</div>
+      </div>
+      <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:var(--space-lg);text-align:center;">
+        <div style="font-size:2rem;font-weight:800;font-family:var(--font-heading);color:var(--secondary);">{{ districts|sum(attribute='place_count') }}</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);">Total Places</div>
+      </div>
+    </div>
+
+    <!-- District List -->
+    <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-xl);overflow:hidden;">
+      <div style="padding:var(--space-lg);border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between;">
+        <h2 style="font-family:var(--font-heading);font-size:1.1rem;margin:0;">All Districts</h2>
+        <span style="font-size:0.8rem;color:var(--text-muted);">Drag rows to reorder • Changes save automatically</span>
+      </div>
+
+      <div id="district-list">
+        {% for d in districts %}
+        <div class="district-row" data-id="{{ d.id }}" style="display:flex;align-items:center;gap:var(--space-md);padding:var(--space-md) var(--space-lg);border-bottom:1px solid var(--border-color);transition:background 0.2s;{% if not d.is_visible %}opacity:0.5;{% endif %}" draggable="true">
+
+          <!-- Drag Handle -->
+          <div style="cursor:grab;color:var(--text-muted);font-size:1.2rem;flex-shrink:0;" title="Drag to reorder">⠿</div>
+
+          <!-- Order Number -->
+          <div style="width:28px;height:28px;background:var(--bg-elevated);border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:var(--text-muted);flex-shrink:0;">{{ loop.index }}</div>
+
+          <!-- Cover Thumbnail -->
+          <div style="width:64px;height:44px;border-radius:var(--radius-md);overflow:hidden;flex-shrink:0;background:var(--bg-elevated);">
+            {% if d.cover_image %}
+            <img src="{{ url_for('static', filename='uploads/districts/' + d.cover_image) }}" alt="" style="width:100%;height:100%;object-fit:cover;">
+            {% else %}
+            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">🏔️</div>
+            {% endif %}
+          </div>
+
+          <!-- Info -->
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:600;font-size:0.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              {{ d.name }}
+              {% if d.is_featured %}<span style="color:var(--gold);font-size:0.75rem;margin-left:4px;">⭐ Featured</span>{% endif %}
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-muted);">
+              {{ d.place_count }} places • {{ d.block_count }} blocks
+              {% if d.famous_for %} • {{ d.famous_for[:40] }}{% endif %}
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div style="display:flex;gap:4px;flex-shrink:0;">
+            <!-- Upload Cover -->
+            <form method="POST" action="{{ url_for('admin.upload_district_cover', district_id=d.id) }}" enctype="multipart/form-data" style="display:inline;">
+{{ csrf_input() }}
+              <label style="cursor:pointer;padding:6px 8px;border-radius:var(--radius-md);background:var(--bg-elevated);font-size:0.75rem;display:inline-flex;align-items:center;gap:4px;transition:all 0.2s;border:1px solid var(--border-color);" title="Upload cover">
+                📷
+                <input type="file" name="cover_image" accept="image/*" style="display:none;" onchange="this.form.submit()">
+              </label>
+            </form>
+
+            <!-- Toggle Featured -->
+            <form method="POST" action="{{ url_for('admin.toggle_district_featured', district_id=d.id) }}" style="display:inline;">
+{{ csrf_input() }}
+              <button type="submit" style="padding:6px 8px;border-radius:var(--radius-md);background:{% if d.is_featured %}rgba(250,204,21,0.15){% else %}var(--bg-elevated){% endif %};border:1px solid var(--border-color);cursor:pointer;font-size:0.75rem;" title="Toggle featured">{% if d.is_featured %}⭐{% else %}☆{% endif %}</button>
+            </form>
+
+            <!-- Toggle Visibility -->
+            <form method="POST" action="{{ url_for('admin.toggle_district_visibility', district_id=d.id) }}" style="display:inline;">
+{{ csrf_input() }}
+              <button type="submit" style="padding:6px 8px;border-radius:var(--radius-md);background:{% if d.is_visible %}rgba(16,185,129,0.15){% else %}rgba(100,100,100,0.15){% endif %};border:1px solid var(--border-color);cursor:pointer;font-size:0.75rem;" title="Toggle visibility">{% if d.is_visible %}👁️{% else %}🙈{% endif %}</button>
+            </form>
+
+            <!-- Edit -->
+            <a href="{{ url_for('admin.edit_district_view', district_id=d.id) }}" style="padding:6px 8px;border-radius:var(--radius-md);background:var(--bg-elevated);border:1px solid var(--border-color);font-size:0.75rem;text-decoration:none;display:inline-flex;align-items:center;" title="Edit">✏️</a>
+
+            <!-- Delete -->
+            <form method="POST" action="{{ url_for('admin.delete_district_view', district_id=d.id) }}" style="display:inline;">
+{{ csrf_input() }}
+              <button type="submit" onclick="return confirm('Delete {{ d.name }}? This will also unlink all places from this district.')" style="padding:6px 8px;border-radius:var(--radius-md);background:rgba(244,63,94,0.1);border:1px solid rgba(244,63,94,0.2);cursor:pointer;font-size:0.75rem;color:var(--accent-rose);" title="Delete">🗑️</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ── DRAG & DROP REORDER ──
+(function() {
+  const list = document.getElementById('district-list');
+  let dragSrc = null;
+
+  list.querySelectorAll('.district-row').forEach(row => {
+    row.addEventListener('dragstart', function(e) {
+      dragSrc = this;
+      this.style.opacity = '0.4';
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', function() {
+      this.style.opacity = '1';
+      list.querySelectorAll('.district-row').forEach(r => r.style.borderTop = '');
+    });
+    row.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      this.style.borderTop = '3px solid var(--primary)';
+    });
+    row.addEventListener('dragleave', function() {
+      this.style.borderTop = '';
+    });
+    row.addEventListener('drop', function(e) {
+      e.preventDefault();
+      this.style.borderTop = '';
+      if (dragSrc !== this) {
+        list.insertBefore(dragSrc, this);
+        saveOrder();
+      }
+    });
+  });
+
+  function saveOrder() {
+    const ids = Array.from(list.querySelectorAll('.district-row')).map(r => parseInt(r.dataset.id));
+    fetch('{{ url_for("admin.reorder_districts_view") }}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ids: ids})
+    }).then(r => r.json()).then(data => {
+      if (data.ok) {
+        // Update visual order numbers
+        list.querySelectorAll('.district-row').forEach((row, i) => {
+          row.querySelectorAll('div')[1].textContent = i + 1;
+        });
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,580 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<style>
+/* Dashboard Stats */
+.admin-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-2xl);
+}
+.admin-stat-card {
+  padding: var(--space-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+.admin-stat-card::after {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 3px;
+}
+.admin-stat-card:nth-child(1)::after { background: var(--primary); }
+.admin-stat-card:nth-child(2)::after { background: var(--secondary); }
+.admin-stat-card:nth-child(3)::after { background: var(--accent-blue); }
+.admin-stat-card:nth-child(4)::after { background: var(--accent-purple); }
+.admin-stat-card:nth-child(5)::after { background: var(--accent-amber); }
+.admin-stat-card:nth-child(6)::after { background: var(--accent-rose); }
+.admin-stat-card:nth-child(7)::after { background: var(--accent-emerald); }
+.admin-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.admin-stat-icon {
+  font-size: 1.5rem;
+  margin-bottom: var(--space-sm);
+}
+.admin-stat-value {
+  font-family: var(--font-heading);
+  font-size: 1.8rem; font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+.admin-stat-label {
+  font-size: 0.78rem; color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Quick Actions */
+.admin-quick-actions {
+  display: flex; gap: var(--space-sm); flex-wrap: wrap;
+  margin-bottom: var(--space-2xl);
+}
+
+/* Two Column Layout */
+.admin-two-col {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: var(--space-xl);
+  margin-bottom: var(--space-2xl);
+}
+
+/* Panel */
+.admin-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+.admin-panel-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--border-light);
+}
+.admin-panel-title {
+  font-family: var(--font-heading);
+  font-size: 1rem; font-weight: 600;
+  display: flex; align-items: center; gap: 8px;
+}
+.admin-panel-body { padding: var(--space-lg); }
+
+/* Submission Item */
+.admin-sub-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: var(--space-md) 0;
+  border-bottom: 1px solid var(--border-light);
+  gap: var(--space-md);
+}
+.admin-sub-item:last-child { border-bottom: none; }
+.admin-sub-info { flex: 1; min-width: 0; }
+.admin-sub-name {
+  font-weight: 600; font-size: 0.9rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.admin-sub-meta {
+  font-size: 0.78rem; color: var(--text-muted); margin-top: 2px;
+}
+.admin-sub-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+/* Activity Log */
+.admin-log-item {
+  display: flex; align-items: center; gap: var(--space-md);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+  font-size: 0.85rem;
+}
+.admin-log-item:last-child { border-bottom: none; }
+.admin-log-icon {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  background: var(--bg-elevated);
+}
+.admin-log-text { flex: 1; color: var(--text-secondary); }
+.admin-log-text strong { color: var(--text-primary); }
+.admin-log-time { font-size: 0.72rem; color: var(--text-muted); flex-shrink: 0; }
+
+/* Places Table */
+.places-search {
+  padding: 10px 14px;
+  background: var(--bg-elevated);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  width: 100%; max-width: 400px;
+  margin-bottom: var(--space-md);
+  outline: none;
+  font-family: var(--font-body);
+  transition: all 0.25s;
+}
+.places-search:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-100);
+}
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.admin-table thead th {
+  text-align: left;
+  padding: 12px 10px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border-color);
+}
+.admin-table tbody tr {
+  border-bottom: 1px solid var(--border-light);
+  transition: background 0.2s;
+}
+.admin-table tbody tr:hover {
+  background: var(--primary-50);
+}
+.admin-table td {
+  padding: 10px;
+  font-size: 0.85rem;
+}
+.admin-table .place-name-cell a {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.admin-table .place-name-cell a:hover { color: var(--primary); }
+.updated-badge {
+  font-size: 0.68rem;
+  color: var(--secondary);
+  font-weight: 500;
+}
+
+/* Quick Edit Modal */
+.quick-edit-modal {
+  display: none;
+  position: fixed; inset: 0;
+  z-index: 1000;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
+}
+.quick-edit-modal.open { display: flex; }
+.quick-edit-box {
+  background: var(--bg-card-solid);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  width: 90%; max-width: 600px;
+  max-height: 80vh; overflow-y: auto;
+  box-shadow: var(--shadow-xl);
+}
+.quick-edit-box h3 {
+  font-family: var(--font-heading);
+  margin-bottom: var(--space-lg);
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .admin-two-col { grid-template-columns: 1fr; }
+  .admin-stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set admin_active = 'dashboard' %}
+<div class="admin-layout">
+  {% include "partials/admin_sidebar.html" %}
+
+  <!-- ═══ MAIN CONTENT ═══ -->
+  <div class="admin-main">
+    <div style="margin-bottom:var(--space-xl);">
+      <h1 style="font-family:var(--font-heading);font-size:1.6rem;font-weight:700;margin-bottom:4px;">
+        Dashboard <span class="text-gradient-saffron">Overview</span>
+      </h1>
+      <p style="color:var(--text-muted);font-size:0.9rem;">Welcome back! Here's what's happening on HiddenYatra.</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="admin-stats-grid">
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon">🗺️</div>
+        <div class="admin-stat-value">{{ stats.states }}</div>
+        <div class="admin-stat-label">States</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon">📍</div>
+        <div class="admin-stat-value">{{ stats.districts }}</div>
+        <div class="admin-stat-label">Districts</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon">🏛️</div>
+        <div class="admin-stat-value">{{ stats.places }}</div>
+        <div class="admin-stat-label">Places</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon">📸</div>
+        <div class="admin-stat-value">{{ stats.photos }}</div>
+        <div class="admin-stat-label">Photos</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon">⭐</div>
+        <div class="admin-stat-value">{{ stats.reviews }}</div>
+        <div class="admin-stat-label">Reviews</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon">👤</div>
+        <div class="admin-stat-value">{{ stats.users }}</div>
+        <div class="admin-stat-label">Users</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon">🏘️</div>
+        <div class="admin-stat-value">{{ stats.blocks or 0 }}</div>
+        <div class="admin-stat-label">Blocks</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon">❤️</div>
+        <div class="admin-stat-value">{{ stats.wishlists or 0 }}</div>
+        <div class="admin-stat-label">Wishlists</div>
+      </div>
+      <div class="admin-stat-card">
+        <div class="admin-stat-icon">📝</div>
+        <div class="admin-stat-value" style="color:var(--accent-amber);">{{ stats.pending_submissions }}</div>
+        <div class="admin-stat-label">Pending</div>
+      </div>
+      <a href="{{ url_for('admin.recycle_bin') }}" class="admin-stat-card" style="text-decoration:none;color:inherit;">
+        <div class="admin-stat-icon">🗑️</div>
+        <div class="admin-stat-value" style="color:var(--accent-rose);">{{ stats.deleted_places }}</div>
+        <div class="admin-stat-label">Deleted</div>
+      </a>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="admin-quick-actions">
+      <a href="{{ url_for('admin.add_place_view') }}" class="btn btn-primary">+ Add Place</a>
+      <a href="{{ url_for('admin.districts_manager') }}" class="btn btn-outline">🗺️ Districts</a>
+      <a href="{{ url_for('admin.trending_manager') }}" class="btn btn-outline">🔥 Trending</a>
+      <a href="{{ url_for('admin.submissions') }}" class="btn btn-outline">📝 Submissions</a>
+      <a href="{{ url_for('admin.nearby_services') }}" class="btn btn-outline">🏥 Services</a>
+      <a href="{{ url_for('admin.recycle_bin') }}" class="btn btn-outline">🗑️ Recycle Bin{% if stats.deleted_places > 0 %} ({{ stats.deleted_places }}){% endif %}</a>
+    </div>
+
+    <!-- Analytics Row -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--space-md);margin-bottom:var(--space-2xl);">
+      <!-- Most Viewed Places -->
+      <div class="admin-panel">
+        <div class="admin-panel-header">
+          <span class="admin-panel-title">🔥 Most Viewed Places</span>
+        </div>
+        <div class="admin-panel-body">
+          {% if top_viewed %}
+          {% for p in top_viewed %}
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-light);font-size:0.85rem;">
+            <span style="font-weight:500;">{{ p.name[:30] }}</span>
+            <span style="color:var(--text-muted);font-size:0.78rem;">{{ p.view_count or 0 }} views</span>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div style="text-align:center;padding:var(--space-lg);color:var(--text-muted);font-size:0.85rem;">No data yet</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Top Districts -->
+      <div class="admin-panel">
+        <div class="admin-panel-header">
+          <span class="admin-panel-title">🗺️ Top Districts</span>
+        </div>
+        <div class="admin-panel-body">
+          {% if top_districts %}
+          {% for d in top_districts %}
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-light);font-size:0.85rem;">
+            <span style="font-weight:500;">{{ d.name }}</span>
+            <span style="color:var(--text-muted);font-size:0.78rem;">{{ d.total_views or 0 }} views · {{ d.place_count }} places</span>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div style="text-align:center;padding:var(--space-lg);color:var(--text-muted);font-size:0.85rem;">No data yet</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Recently Added -->
+      <div class="admin-panel">
+        <div class="admin-panel-header">
+          <span class="admin-panel-title">🆕 Recently Added</span>
+        </div>
+        <div class="admin-panel-body">
+          {% if recent_places %}
+          {% for p in recent_places %}
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-light);font-size:0.85rem;">
+            <span style="font-weight:500;">{{ p.name[:30] }}</span>
+            <span style="color:var(--text-muted);font-size:0.78rem;">{{ p.created_at.strftime('%Y-%m-%d') if p.created_at else '—' }}</span>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div style="text-align:center;padding:var(--space-lg);color:var(--text-muted);font-size:0.85rem;">No places yet</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ANALYTICS CHARTS ═══ -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--space-md);margin-bottom:var(--space-2xl);">
+      <!-- Category Distribution -->
+      <div class="admin-panel">
+        <div class="admin-panel-header">
+          <span class="admin-panel-title">📊 Category Distribution</span>
+        </div>
+        <div class="admin-panel-body">
+          {% set cat_colors = {'temple':'#f59e0b','historical':'#6366f1','nature':'#22c55e','tourist_spot':'#3b82f6','waterfall':'#06b6d4','fort':'#ef4444','religious':'#a855f7','park':'#10b981','hidden_gem':'#ec4899'} %}
+          {% for p in top_viewed %}
+          {% set color = cat_colors.get(p.category, '#6366f1') %}
+          <div style="margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:3px;">
+              <span style="font-weight:500;">{{ p.category|category_label }}</span>
+              <span style="color:var(--text-muted);">{{ p.view_count or 0 }}</span>
+            </div>
+            <div style="height:6px;background:var(--bg-tertiary);border-radius:3px;overflow:hidden;">
+              <div style="height:100%;width:{{ [((p.view_count or 0) / (top_viewed[0].view_count or 1) * 100)|int, 100]|min }}%;background:{{ color }};border-radius:3px;transition:width 1s ease;"></div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- Review Ratings Overview -->
+      <div class="admin-panel">
+        <div class="admin-panel-header">
+          <span class="admin-panel-title">⭐ Review Overview</span>
+        </div>
+        <div class="admin-panel-body">
+          <div style="text-align:center;margin-bottom:var(--space-md);">
+            <div style="font-size:2.5rem;font-weight:800;background:linear-gradient(135deg,var(--primary),var(--secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;">{{ stats.reviews }}</div>
+            <div style="font-size:.82rem;color:var(--text-muted);">Total Reviews</div>
+          </div>
+          {% set star_colors = ['#ef4444','#f59e0b','#eab308','#84cc16','#22c55e'] %}
+          {% for i in range(5, 0, -1) %}
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <span style="font-size:.78rem;width:16px;text-align:right;color:var(--text-muted);">{{ i }}★</span>
+            <div style="flex:1;height:8px;background:var(--bg-tertiary);border-radius:4px;overflow:hidden;">
+              <div style="height:100%;width:{{ [20 * i, 100]|min }}%;background:{{ star_colors[i-1] }};border-radius:4px;"></div>
+            </div>
+          </div>
+          {% endfor %}
+          <div style="text-align:center;margin-top:var(--space-md);font-size:.8rem;color:var(--text-muted);">
+            📊 {{ stats.places }} places · {{ stats.photos }} photos · {{ stats.wishlists or 0 }} wishlists
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Two Column: Pending + Activity -->
+    <div class="admin-two-col">
+      <!-- Pending Submissions -->
+      <div class="admin-panel">
+        <div class="admin-panel-header">
+          <span class="admin-panel-title">📝 Pending Submissions</span>
+          <a href="{{ url_for('admin.submissions') }}" class="section-link" style="font-size:0.82rem;">View All →</a>
+        </div>
+        <div class="admin-panel-body">
+          {% if pending %}
+          {% for sub in pending[:5] %}
+          <div class="admin-sub-item">
+            <div class="admin-sub-info">
+              <div class="admin-sub-name">{{ sub.place_name }}</div>
+              <div class="admin-sub-meta">
+                📍 {{ sub.district_name or 'Unknown' }} • by {{ sub.submitter_name or 'Anonymous' }} • {{ sub.created_at.strftime('%Y-%m-%d') if sub.created_at else '' }}
+              </div>
+            </div>
+            <div class="admin-sub-actions">
+              <a href="{{ url_for('admin.submission_detail', sub_id=sub.id) }}" class="btn btn-sm btn-outline">Review</a>
+              <form method="POST" action="{{ url_for('admin.approve_sub', sub_id=sub.id) }}" style="display:inline;">
+{{ csrf_input() }}
+                <button type="submit" class="btn btn-sm btn-primary">✅</button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div style="text-align:center;padding:var(--space-xl);color:var(--text-muted);">
+            <span style="font-size:2rem;display:block;margin-bottom:8px;">✨</span>
+            No pending submissions
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="admin-panel">
+        <div class="admin-panel-header">
+          <span class="admin-panel-title">📋 Recent Activity</span>
+          <a href="{{ url_for('admin.admin_logs') }}" class="section-link" style="font-size:0.82rem;">View All →</a>
+        </div>
+        <div class="admin-panel-body">
+          {% if logs %}
+          {% for log in logs[:6] %}
+          <div class="admin-log-item">
+            <div class="admin-log-icon">
+              {% if log.action == 'approve' %}✅{% elif log.action == 'reject' %}❌{% elif log.action == 'edit' %}✏️{% elif log.action == 'merge' %}🔗{% elif log.action == 'delete' %}🗑️{% elif log.action == 'soft_delete' %}🗑️{% elif log.action == 'restore' %}♻️{% elif log.action == 'permanent_delete' %}💀{% elif log.action == 'cover_change' %}📷{% else %}📝{% endif %}
+            </div>
+            <div class="admin-log-text">
+              <strong>{{ log.action | capitalize }}</strong> {{ log.target_type }}
+              {% if log.details %}<br><span style="color:var(--text-muted);font-size:0.78rem;">{{ log.details[:50] }}</span>{% endif %}
+            </div>
+            {% set ts = log.created_at | string %}<div class="admin-log-time">{{ ts[5:16] }}</div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div style="text-align:center;padding:var(--space-xl);color:var(--text-muted);">
+            No activity yet
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- All Places Table -->
+    <div class="admin-panel">
+      <div class="admin-panel-header">
+        <span class="admin-panel-title">🏛️ All Places <span style="font-size:0.82rem;color:var(--text-muted);font-weight:400;margin-left:4px;">({{ places|length }})</span></span>
+        <input type="text" class="places-search" id="places-search" placeholder="🔍 Search places..." oninput="filterPlaces(this.value)" style="margin:0;max-width:280px;">
+      </div>
+      <div style="overflow-x:auto;">
+        {% if places %}
+        <table class="admin-table" id="places-table">
+          <thead>
+            <tr>
+              <th>Place</th>
+              <th>District</th>
+              <th>Category</th>
+              <th style="text-align:center;">Views</th>
+              <th style="text-align:center;">⭐</th>
+              <th style="text-align:right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for place in places %}
+            <tr class="place-row">
+              <td class="place-name-cell">
+                <a href="{{ url_for('places.place_detail', slug=place.slug) }}" target="_blank">{{ place.name }}</a>
+                {% if place.updated_at %}<br><span class="updated-badge">Updated: {{ place.updated_at.strftime('%Y-%m-%d') if place.updated_at }}</span>{% endif %}
+              </td>
+              <td>{{ place.district_name or '—' }}</td>
+              <td><span class="place-card-badge" style="position:static;">{{ place.category | category_label }}</span></td>
+              <td style="text-align:center;color:var(--text-muted);">{{ place.view_count or 0 }}</td>
+              <td style="text-align:center;">{% if place.is_featured %}⭐{% else %}—{% endif %}</td>
+              <td style="text-align:right;">
+                <div style="display:flex;gap:4px;justify-content:flex-end;">
+                  <button type="button" class="btn btn-sm btn-outline" onclick="openQuickEdit({{ place.id }}, {{ place.name | tojson }}, {{ (place.description[:100] if place.description else '') | tojson }}, {{ place.category | tojson }}, {{ place.is_featured | int }})" title="Quick Edit">⚡</button>
+                  <a href="{{ url_for('admin.edit_place_view', place_id=place.id) }}" class="btn btn-sm btn-outline" title="Full Edit">✏️</a>
+                  <form method="POST" action="{{ url_for('admin.delete_place_view', place_id=place.id) }}" onsubmit="return confirm('Move \u0022{{ place.name }}\u0022 to Recycle Bin?')">
+{{ csrf_input() }}
+                    <button type="submit" class="btn btn-sm btn-danger" title="Move to Recycle Bin">🗑️</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state" style="padding:var(--space-3xl);">
+          <span class="empty-icon">🗺️</span>
+          <h3>No places added yet</h3>
+          <a href="{{ url_for('admin.add_place_view') }}" class="btn btn-primary">+ Add First Place</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Edit Modal -->
+<div class="quick-edit-modal" id="quick-edit-modal" onclick="if(event.target===this)closeQuickEdit()">
+  <div class="quick-edit-box">
+    <h3>⚡ Quick Edit</h3>
+    <form method="POST" id="quick-edit-form">
+{{ csrf_input() }}
+      <div class="form-group" style="margin-bottom:var(--space-md);">
+        <label class="form-label">Place Name</label>
+        <input type="text" name="name" id="qe-name" class="form-input" required>
+      </div>
+      <div class="form-group" style="margin-bottom:var(--space-md);">
+        <label class="form-label">Description</label>
+        <textarea name="description" id="qe-desc" class="form-textarea" rows="4"></textarea>
+      </div>
+      <div class="form-row" style="margin-bottom:var(--space-md);">
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select name="category" id="qe-category" class="form-input">
+            {% for code, label in categories %}
+            <option value="{{ code }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="display:flex;align-items:center;gap:8px;">
+            <input type="checkbox" name="is_featured" id="qe-featured"> ⭐ Featured
+          </label>
+        </div>
+      </div>
+      <div style="display:flex;gap:var(--space-sm);justify-content:flex-end;">
+        <button type="button" class="btn btn-outline" onclick="closeQuickEdit()">Cancel</button>
+        <button type="submit" class="btn btn-primary">💾 Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterPlaces(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.place-row').forEach(row => {
+    const name = row.querySelector('td').textContent.toLowerCase();
+    row.style.display = name.includes(q) ? '' : 'none';
+  });
+}
+function openQuickEdit(id, name, desc, cat, featured) {
+  document.getElementById('qe-name').value = name;
+  document.getElementById('qe-desc').value = desc;
+  document.getElementById('qe-category').value = cat;
+  document.getElementById('qe-featured').checked = !!featured;
+  document.getElementById('quick-edit-form').action = '/admin/quick-edit/' + id;
+  document.getElementById('quick-edit-modal').classList.add('open');
+}
+function closeQuickEdit() {
+  document.getElementById('quick-edit-modal').classList.remove('open');
+}
+</script>
+{% endblock %}

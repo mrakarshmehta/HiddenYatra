@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}{% if query %}Search: {{ query }} — {% endif %}{{ app_name }}{% endblock %}
+{% block meta_desc %}Search for places, districts, blocks, and food across Bihar on HiddenYatra.{% endblock %}
+
+{% block extra_css %}
+<style>
+.search-hero {
+  padding: 50px var(--space-lg) 30px;
+  text-align: center;
+  background: linear-gradient(135deg, var(--bg-body), rgba(255,122,24,0.04));
+}
+.search-hero h1 {
+  font-family: var(--font-heading); font-size: clamp(1.5rem, 3vw, 2rem);
+  margin-bottom: var(--space-lg);
+}
+.search-box {
+  max-width: 600px; margin: 0 auto;
+  display: flex; gap: var(--space-sm);
+}
+.search-box input {
+  flex: 1; padding: 12px 20px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card); color: var(--text-primary);
+  font-size: 1rem; font-family: var(--font-body); outline: none;
+  transition: border-color 0.3s;
+}
+.search-box input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(255,122,24,0.1); }
+.search-box button {
+  padding: 12px 24px; border-radius: var(--radius-full);
+  background: var(--primary); color: white; border: none;
+  font-weight: 600; cursor: pointer; font-family: var(--font-body);
+  transition: background 0.3s;
+}
+.search-box button:hover { background: var(--primary-dark); }
+
+.search-main { max-width: 900px; margin: 0 auto; padding: var(--space-xl) var(--space-lg) var(--space-3xl); }
+
+.search-section { margin-bottom: var(--space-xl); }
+.search-section-title {
+  font-family: var(--font-heading); font-size: 1rem; font-weight: 700;
+  margin-bottom: var(--space-md);
+  display: flex; align-items: center; gap: 8px;
+}
+.search-section-count {
+  padding: 2px 10px; border-radius: var(--radius-full);
+  background: var(--primary-50); color: var(--primary);
+  font-size: 0.72rem; font-weight: 600;
+}
+.search-item {
+  display: flex; align-items: center; gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--bg-card); border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  text-decoration: none; color: var(--text-primary);
+  margin-bottom: var(--space-sm);
+  transition: all 0.2s;
+}
+.search-item:hover { border-color: var(--primary); transform: translateX(4px); }
+.search-item-icon {
+  width: 40px; height: 40px; border-radius: var(--radius-md);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; flex-shrink: 0;
+}
+.search-item-name { font-weight: 600; font-size: 0.9rem; }
+.search-item-meta { font-size: 0.75rem; color: var(--text-muted); }
+
+.search-places-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-md);
+}
+
+.search-summary {
+  text-align: center; padding: var(--space-md);
+  color: var(--text-muted); font-size: 0.88rem;
+  margin-bottom: var(--space-lg);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="search-hero">
+  <h1>🔍 {% if query %}Results for "<span class="text-gradient-saffron">{{ query }}</span>"{% else %}Search <span class="text-gradient-saffron">HiddenYatra</span>{% endif %}</h1>
+  <form action="{{ url_for('main.search') }}" method="GET" class="search-box">
+    <input type="text" name="q" value="{{ query }}" placeholder="Search places, districts, food..." autofocus>
+    <button type="submit">Search</button>
+  </form>
+</section>
+
+<div class="search-main">
+  {% if query %}
+  {% set total = (results.states|length) + (results.districts|length) + (results.blocks|length) + (results.places|length) + (results.foods|length) %}
+  <div class="search-summary">
+    Found <strong>{{ total }}</strong> results for "{{ query }}"
+  </div>
+
+  <!-- ═══ GOOGLE MAPS–STYLE SMART NEARBY DISCOVERY SYSTEM ═══ -->
+  <div class="search-section">
+    <div class="search-section-title">📍 Smart Nearby Discovery <span class="search-section-count">Interactive Map & Distance Sorted</span></div>
+    {% include "partials/smart_nearby_discovery.html" %}
+  </div>
+
+  <!-- Smart/AI Results -->
+  {% if smart and smart|length > 0 %}
+  <div class="search-section">
+    <div class="search-section-title">⚡ Best Matches <span class="search-section-count">{{ smart|length }}</span></div>
+    <div class="search-places-grid">
+      {% for place in smart %}
+      {% include "partials/place_card.html" %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Districts -->
+  {% if results.districts %}
+  <div class="search-section">
+    <div class="search-section-title">🗺️ Districts <span class="search-section-count">{{ results.districts|length }}</span></div>
+    {% for d in results.districts %}
+    <a href="{{ url_for('main.district_detail', state_slug='bihar', district_slug=d.slug) }}" class="search-item">
+      <div class="search-item-icon" style="background:rgba(255,122,24,0.1);">🗺️</div>
+      <div>
+        <div class="search-item-name">{{ d.name }}</div>
+        <div class="search-item-meta">{{ d.place_count or 0 }} places{% if d.famous_for %} · {{ d.famous_for }}{% endif %}</div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Blocks -->
+  {% if results.blocks %}
+  <div class="search-section">
+    <div class="search-section-title">🏘️ Blocks <span class="search-section-count">{{ results.blocks|length }}</span></div>
+    {% for b in results.blocks %}
+    <a href="{% if b.state_slug and b.district_slug and b.slug %}{{ url_for('main.block_detail', state_slug=b.state_slug, district_slug=b.district_slug, block_slug=b.slug) }}{% else %}#{% endif %}" class="search-item">
+      <div class="search-item-icon" style="background:rgba(0,191,166,0.1);">🏘️</div>
+      <div>
+        <div class="search-item-name">{{ b.name }}</div>
+        <div class="search-item-meta">{{ b.district_name or '' }} · {{ b.place_count or 0 }} places</div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Places -->
+  {% if results.places %}
+  <div class="search-section">
+    <div class="search-section-title">📍 Places <span class="search-section-count">{{ results.places|length }}</span></div>
+    <div class="search-places-grid">
+      {% for place in results.places %}
+      {% include "partials/place_card.html" %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Foods -->
+  {% if results.foods %}
+  <div class="search-section">
+    <div class="search-section-title">🍛 Food & Culture <span class="search-section-count">{{ results.foods|length }}</span></div>
+    {% for f in results.foods %}
+    <div class="search-item" style="cursor:default;">
+      <div class="search-item-icon" style="background:rgba(245,158,11,0.1);">🍛</div>
+      <div>
+        <div class="search-item-name">{{ f.name }}</div>
+        <div class="search-item-meta">{{ f.district_name or '' }}{% if f.description %} · {{ f.description[:60] }}{% endif %}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if total == 0 %}
+  <div class="empty-state" style="padding:var(--space-3xl);">
+    <span class="empty-icon">🔍</span>
+    <h3>No results found for "{{ query }}"</h3>
+    <p style="color:var(--text-muted);">Try different keywords or <a href="{{ url_for('main.browse') }}" style="color:var(--primary);">browse all places</a></p>
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state" style="padding:var(--space-3xl);">
+    <span class="empty-icon">🔍</span>
+    <h3>Search for places, districts, food & more</h3>
+    <p style="color:var(--text-muted);">Try searching for "Mahabodhi Temple", "Patna", "Litti Chokha"</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

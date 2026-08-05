@@ -1,0 +1,56 @@
+# ═══════════════════════════════════════════════════════
+# HiddenYatra — systemd Service Unit
+# Place at: /etc/systemd/system/hiddenyatra.service
+#
+# Commands:
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable hiddenyatra
+#   sudo systemctl start hiddenyatra
+#   sudo systemctl status hiddenyatra
+#   sudo journalctl -u hiddenyatra -f
+# ═══════════════════════════════════════════════════════
+
+[Unit]
+Description=HiddenYatra Flask Application
+After=network.target mysql.service
+Requires=mysql.service
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/hiddenyatra
+EnvironmentFile=/var/www/hiddenyatra/.env
+
+ExecStart=/var/www/hiddenyatra/venv/bin/gunicorn \
+    -c gunicorn.conf.py \
+    wsgi:app
+
+ExecReload=/bin/kill -s HUP $MAINPID
+
+# ── Restart Policy ──
+Restart=on-failure
+RestartSec=5
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+# ── Security Hardening ──
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/www/hiddenyatra/static/uploads
+PrivateTmp=true
+PrivateDevices=true
+
+# ── Resource Limits ──
+LimitNOFILE=65535
+TimeoutStartSec=30
+TimeoutStopSec=30
+
+# ── Logging ──
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hiddenyatra
+
+[Install]
+WantedBy=multi-user.target

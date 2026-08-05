@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+{% block title %}Create Account — {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.auth-split { display:grid; grid-template-columns:1fr 1fr; min-height:calc(100vh - var(--navbar-height)); }
+
+.auth-visual { position:relative; overflow:hidden; }
+.slider-images { position:absolute; inset:0; }
+.slider-img {
+  position:absolute; inset:0;
+  background-size:cover; background-position:center;
+  opacity:0; transition:opacity 1.2s ease-in-out;
+}
+.slider-img.active { opacity:1; }
+.auth-visual-overlay {
+  position:absolute; inset:0; z-index:1;
+  background:linear-gradient(180deg, rgba(10,10,18,0.2) 0%, rgba(10,10,18,0.88) 100%);
+}
+.auth-visual-content {
+  position:relative; z-index:2;
+  display:flex; flex-direction:column; justify-content:flex-end;
+  padding:clamp(28px,5vw,48px); height:100%;
+}
+.auth-brand { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+.auth-brand-icon { font-size:1.8rem; }
+.auth-brand-text { font-family:var(--font-heading); font-size:1.6rem; font-weight:800; color:#fff; }
+.auth-brand-text span { color:#F97316; }
+.auth-tagline { font-size:1.2rem; font-weight:600; color:#fff; margin-bottom:6px; line-height:1.4; }
+.auth-subtitle { color:rgba(255,255,255,0.65); font-size:0.85rem; line-height:1.6; margin-bottom:28px; }
+
+.auth-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.auth-stat {
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:10px; padding:12px 8px; text-align:center;
+}
+.auth-stat-num { font-size:1.1rem; font-weight:800; color:#F97316; }
+.auth-stat-label { font-size:0.65rem; color:rgba(255,255,255,0.55); margin-top:2px; }
+
+.slider-dots { display:flex; gap:6px; margin-top:20px; }
+.slider-dot { width:24px; height:3px; border-radius:2px; background:rgba(255,255,255,0.25); transition:all 0.4s; }
+.slider-dot.active { background:#F97316; width:36px; }
+
+.auth-form-panel {
+  display:flex; align-items:center; justify-content:center;
+  padding:clamp(20px,3vw,40px); background:var(--bg-primary);
+  overflow-y:auto;
+}
+.auth-form-inner { width:100%; max-width:420px; }
+.auth-form-header { margin-bottom:20px; }
+.auth-form-header h1 { font-family:var(--font-heading); font-size:1.4rem; font-weight:700; margin-bottom:4px; }
+.auth-form-header p { color:var(--text-muted); font-size:0.82rem; }
+
+.form-group-auth { margin-bottom:14px; }
+.form-group-auth label { display:block; font-size:0.74rem; font-weight:600; color:var(--text-secondary); margin-bottom:4px; }
+.input-wrapper {
+  display:flex; align-items:center;
+  background:var(--bg-elevated); border:1.5px solid var(--border-color);
+  border-radius:10px; transition:all 0.3s;
+}
+.input-wrapper:focus-within { border-color:#F97316; box-shadow:0 0 0 3px rgba(249,115,22,0.12); }
+.input-wrapper input {
+  flex:1; background:transparent; border:none; outline:none;
+  padding:11px 12px; font-size:0.86rem; color:var(--text-primary); font-family:var(--font-body);
+}
+.input-wrapper input::placeholder { color:var(--text-muted); }
+.input-icon { padding:0 10px; color:var(--text-muted); font-size:0.9rem; flex-shrink:0; }
+.input-toggle { padding:0 10px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:0.82rem; }
+.input-hint { font-size:0.68rem; color:var(--text-muted); margin-top:3px; }
+.input-hint.error { color:#EF4444; }
+.input-hint.success { color:#10B981; }
+
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+.pw-meter { display:flex; gap:3px; margin-top:5px; }
+.pw-bar { flex:1; height:3px; border-radius:2px; background:var(--bg-elevated); transition:all 0.3s; }
+.pw-bar.weak { background:#EF4444; }
+.pw-bar.fair { background:#F59E0B; }
+.pw-bar.strong { background:#10B981; }
+.pw-label { font-size:0.68rem; margin-top:2px; }
+
+.terms-check {
+  display:flex; align-items:flex-start; gap:8px;
+  margin:16px 0; font-size:0.76rem; color:var(--text-secondary);
+}
+.terms-check input[type="checkbox"] { width:15px; height:15px; margin-top:1px; accent-color:#F97316; flex-shrink:0; }
+.terms-check a { color:#F97316; }
+
+.btn-auth {
+  width:100%; padding:12px; border:none; border-radius:10px;
+  background:linear-gradient(135deg,#F97316,#EA580C);
+  color:#fff; font-size:0.9rem; font-weight:700;
+  cursor:pointer; transition:all 0.3s; font-family:var(--font-body);
+}
+.btn-auth:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 6px 20px rgba(249,115,22,0.3); }
+.btn-auth:disabled { opacity:0.6; cursor:not-allowed; }
+.btn-auth .spinner {
+  display:none; width:16px; height:16px; border:2px solid rgba(255,255,255,0.3);
+  border-top-color:#fff; border-radius:50%; animation:spin 0.6s linear infinite;
+  margin-right:6px; vertical-align:middle;
+}
+.btn-auth.loading .spinner { display:inline-block; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+.auth-alt-link { text-align:center; margin-top:16px; font-size:0.82rem; color:var(--text-muted); }
+.auth-alt-link a { color:#F97316; font-weight:600; }
+
+@media(max-width:768px) {
+  .auth-split { grid-template-columns:1fr; }
+  .auth-visual { min-height:180px; }
+  .auth-visual-content { justify-content:center; text-align:center; padding:16px; }
+  .auth-stats { grid-template-columns:repeat(4,1fr); }
+  .auth-stat { padding:8px 4px; }
+  .auth-stat-num { font-size:0.9rem; }
+  .auth-tagline { font-size:1rem; }
+  .auth-subtitle { display:none; }
+  .slider-dots { justify-content:center; }
+  .form-row { grid-template-columns:1fr; }
+}
+@media(max-width:480px) { .auth-stats { grid-template-columns:repeat(2,1fr); } }
+
+@keyframes fadeInUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+.auth-form-inner { animation:fadeInUp 0.5s ease-out; }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set signup = auth_appearance %}
+{% set signup_slides = signup.signup_slider_list %}
+{% set signup_stats = signup.signup_stats_list %}
+{% set slider_on = signup.signup_slider_enabled and signup_slides %}
+{% set banner_img = signup.signup_banner %}
+{% set mobile_img = signup.signup_mobile_image %}
+{% set title = signup.signup_title or 'Join HiddenYatra' %}
+{% set subtitle = signup.signup_subtitle or 'Start discovering Bihar hidden gems' %}
+{% set fallback_slides = [
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Mahabodhi_Temple%2C_Bodh_Gaya%2C_Bihar%2C_India.jpg/800px-Mahabodhi_Temple%2C_Bodh_Gaya%2C_Bihar%2C_India.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Nalanda_University_India_ruins.jpg/1280px-Nalanda_University_India_ruins.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8e/Rajgir_-_Griddhakuta_004.jpg/1280px-Rajgir_-_Griddhakuta_004.jpg',
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Gol_Ghar%2C_Patna.jpg/1280px-Gol_Ghar%2C_Patna.jpg'
+] %}
+{% set img_url = url_for('static', filename='uploads/auth/') %}
+
+<div class="auth-split">
+  <div class="auth-visual">
+    <div class="slider-images">
+      {% if slider_on %}
+        {% for s_img in signup_slides %}
+        <div class="slider-img {% if loop.first %}active{% endif %}" style="background-image:url('{{ img_url + s_img }}')"></div>
+        {% endfor %}
+      {% elif banner_img %}
+        <div class="slider-img active" style="background-image:url('{{ img_url + banner_img }}')"></div>
+      {% else %}
+        {% for f_img in fallback_slides %}
+        <div class="slider-img {% if loop.first %}active{% endif %}" style="background-image:url('{{ f_img }}')"></div>
+        {% endfor %}
+      {% endif %}
+    </div>
+    <div class="auth-visual-overlay"></div>
+    <div class="auth-visual-content">
+      <div class="auth-brand">
+        <span class="auth-brand-icon">
+          <img src="{{ url_for('static', filename='logo-icon.svg') }}" alt="HiddenYatra Logo" width="28" height="28" style="display:block;">
+        </span>
+        <div class="auth-brand-text">Hidden<span>Yatra</span></div>
+      </div>
+      <div class="auth-tagline">{{ title }}</div>
+      {% if subtitle %}<p class="auth-subtitle">{{ subtitle }}</p>{% endif %}
+      {% if signup_stats %}
+      <div class="auth-stats">
+        {% for s in signup_stats %}
+        <div class="auth-stat">
+          <div class="auth-stat-num">{{ s.get('icon', '') }} {{ s.get('value', '') }}</div>
+          <div class="auth-stat-label">{{ s.get('label', '') }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if slider_on or (not banner_img and not slider_on) %}
+      <div class="slider-dots">
+        {% set dot_count = signup_slides if slider_on else fallback_slides %}
+        {% for i in range(dot_count | length) %}
+        <div class="slider-dot {% if loop.first %}active{% endif %}"></div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="auth-form-panel">
+    <div class="auth-form-inner">
+      <div class="auth-form-header">
+        <h1>Create Your Account</h1>
+        <p>Join the community of Bihar explorers</p>
+      </div>
+
+      <form method="POST" id="signup-form">
+        {{ csrf_input() }}
+
+        <div class="form-group-auth">
+          <label for="full_name">Full Name</label>
+          <div class="input-wrapper">
+            <span class="input-icon">👤</span>
+            <input type="text" name="full_name" id="full_name" placeholder="Your full name"
+                   required value="{{ form_data.get('full_name', '') }}" maxlength="100">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group-auth">
+            <label for="username">Username</label>
+            <div class="input-wrapper">
+              <span class="input-icon">@</span>
+              <input type="text" name="username" id="username" placeholder="username"
+                     required value="{{ form_data.get('username', '') }}"
+                     pattern="[a-zA-Z0-9_]{3,20}" maxlength="20" autocomplete="off">
+            </div>
+            <div class="input-hint" id="username-hint">3-20 chars: letters, numbers, _</div>
+          </div>
+          <div class="form-group-auth">
+            <label for="email">Email</label>
+            <div class="input-wrapper">
+              <span class="input-icon">✉️</span>
+              <input type="email" name="email" id="email" placeholder="your@email.com"
+                     required value="{{ form_data.get('email', '') }}">
+            </div>
+            <div class="input-hint">We'll send a verification code</div>
+          </div>
+        </div>
+
+        <div class="form-group-auth">
+          <label for="password">Password</label>
+          <div class="input-wrapper">
+            <span class="input-icon">🔒</span>
+            <input type="password" name="password" id="password" placeholder="Min 8 chars, 1 letter + 1 number" required minlength="8">
+            <button type="button" class="input-toggle" id="pw-toggle">👁️</button>
+          </div>
+          <div class="pw-meter">
+            <div class="pw-bar" id="b1"></div><div class="pw-bar" id="b2"></div>
+            <div class="pw-bar" id="b3"></div><div class="pw-bar" id="b4"></div>
+          </div>
+          <div class="pw-label" id="pw-label"></div>
+        </div>
+
+        <div class="form-group-auth">
+          <label for="confirm_password">Confirm Password</label>
+          <div class="input-wrapper">
+            <span class="input-icon">🔒</span>
+            <input type="password" name="confirm_password" id="confirm_password" placeholder="Repeat password" required minlength="8">
+            <button type="button" class="input-toggle" id="cp-toggle">👁️</button>
+          </div>
+          <div class="input-hint" id="pw-match"></div>
+        </div>
+
+        <div class="terms-check">
+          <input type="checkbox" id="terms" required>
+          <label for="terms">I agree to HiddenYatra's <a href="#">Terms of Service</a> & <a href="#">Privacy Policy</a></label>
+        </div>
+
+        <button type="submit" class="btn-auth" id="submit-btn">
+          <span class="spinner"></span>
+          <span class="btn-text">Create Account 🧭</span>
+        </button>
+      </form>
+
+      <div class="auth-alt-link">
+        Already exploring? <a href="{{ url_for('auth.login') }}">Login to your account</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function tog(tId,iId){const t=document.getElementById(tId),i=document.getElementById(iId);if(t&&i)t.addEventListener('click',function(){i.type=i.type==='password'?'text':'password';t.textContent=i.type==='password'?'👁️':'🙈';});}
+tog('pw-toggle','password');tog('cp-toggle','confirm_password');
+
+const pw=document.getElementById('password');
+const bars=[1,2,3,4].map(function(n){return document.getElementById('b'+n);});
+const pwL=document.getElementById('pw-label');
+pw.addEventListener('input',function(){
+  const v=this.value;bars.forEach(function(b){b.className='pw-bar';});pwL.textContent='';
+  if(!v)return;
+  let s=0;if(v.length>=8)s++;if(/[A-Z]/.test(v))s++;if(/[0-9]/.test(v))s++;if(/[^A-Za-z0-9]/.test(v))s++;
+  const cls=['','weak','weak','fair','strong'][s];
+  const lbl=['','⚠️ Weak','⚡ Fair','💪 Good','✅ Strong'][s];
+  const clr=['','#EF4444','#F59E0B','#F59E0B','#10B981'][s];
+  for(let i=0;i<s;i++)bars[i].classList.add(cls);
+  pwL.textContent=lbl;pwL.style.color=clr;
+});
+
+const cp=document.getElementById('confirm_password');
+const pm=document.getElementById('pw-match');
+cp.addEventListener('input',function(){
+  if(!this.value){pm.textContent='';pm.className='input-hint';return;}
+  if(this.value===pw.value){pm.textContent='✅ Match';pm.className='input-hint success';}
+  else{pm.textContent='❌ Mismatch';pm.className='input-hint error';}
+});
+
+const un=document.getElementById('username');
+const uh=document.getElementById('username-hint');
+un.addEventListener('input',function(){
+  const v=this.value;
+  if(!v){uh.textContent='3-20 chars: letters, numbers, _';uh.className='input-hint';return;}
+  if(v.length<3){uh.textContent='❌ Too short';uh.className='input-hint error';return;}
+  if(!/^[a-zA-Z0-9_]+$/.test(v)){uh.textContent='❌ Invalid chars';uh.className='input-hint error';return;}
+  uh.textContent='✅ Looks good';uh.className='input-hint success';
+});
+
+document.getElementById('signup-form').addEventListener('submit',function(){
+  const btn=document.getElementById('submit-btn');
+  btn.classList.add('loading');btn.disabled=true;
+});
+
+// Slider
+{% set slide_count = (signup_slides if slider_on else fallback_slides) | length %}
+{% if slide_count > 1 %}
+var slides=document.querySelectorAll('.slider-img'),dots=document.querySelectorAll('.slider-dot'),cur=0;
+setInterval(function(){
+  slides[cur].classList.remove('active');if(dots[cur])dots[cur].classList.remove('active');
+  cur=(cur+1)%slides.length;
+  slides[cur].classList.add('active');if(dots[cur])dots[cur].classList.add('active');
+},5000);
+{% endif %}
+</script>
+{% endblock %}

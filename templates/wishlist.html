@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}My Wishlist — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">❤️ My <span class="text-gradient-saffron">Wishlist</span></h1>
+  <p class="page-subtitle">Places you've saved for your next adventure</p>
+</div>
+
+<section class="section">
+  {% if places %}
+  <div class="places-grid stagger-children">
+    {% for place in places %}
+    <div class="place-card reveal-card revealed" style="position:relative;">
+      <div class="place-card-image">
+        {% if place.cover_image %}
+        <img src="{% if place.cover_image.startswith('http') %}{{ place.cover_image }}{% else %}{{ url_for('static', filename='uploads/places/' + place.cover_image) }}{% endif %}" alt="{{ place.name }}" loading="lazy" onerror="this.onerror=null;this.src='/static/placeholder-place.svg';">
+        {% else %}
+        <div class="place-card-placeholder"><span>📸</span></div>
+        {% endif %}
+        <div class="place-card-overlay"></div>
+        <button class="wishlist-btn active"
+                onclick="removeFromWishlist({{ place.id }}, this)"
+                title="Remove from wishlist"
+                style="position:absolute;top:12px;right:12px;z-index:3;">
+          <span class="heart-icon">❤️</span>
+        </button>
+      </div>
+      <div class="place-card-body">
+        <h3 class="place-card-title"><a href="{{ url_for('places.place_detail', slug=place.slug) }}" style="color:inherit;text-decoration:none;">{{ place.name }}</a></h3>
+        <p class="place-card-location">📍 {{ place.state_name }}{% if place.district_name %}, {{ place.district_name }}{% endif %}</p>
+        <a href="{{ url_for('places.place_detail', slug=place.slug) }}" class="btn btn-primary btn-sm" style="margin-top:auto;">Explore →</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="wishlist-empty">
+    <span class="wishlist-empty-icon">💔</span>
+    <h2>Your wishlist is empty</h2>
+    <p>Start exploring Bihar and save your favorite destinations!</p>
+    <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg">Discover Places →</a>
+  </div>
+  {% endif %}
+</section>
+
+<script>
+function removeFromWishlist(placeId, btn) {
+  fetch('/wishlist/remove/' + placeId, {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': '{{ csrf_token() }}' }
+  })
+    .then(r => r.json())
+    .then(data => {
+      const card = btn.closest('.place-card');
+      card.style.transition = 'all 0.4s ease';
+      card.style.opacity = '0';
+      card.style.transform = 'scale(0.9)';
+      setTimeout(() => card.remove(), 400);
+    });
+}
+</script>
+{% endblock %}

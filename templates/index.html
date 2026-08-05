@@ -1,0 +1,986 @@
+{% extends "base.html" %}
+{% block title %}{{ app_name }} — Discover Bihar's Hidden Gems & Modern Tourism Platform{% endblock %}
+{% block meta_desc %}Explore ancient heritage, hidden waterfalls, local street food, and AI-powered trip planning across all 38 districts of Bihar with HiddenYatra.{% endblock %}
+
+{% block extra_meta %}
+<!-- OpenGraph Social Sharing -->
+<meta property="og:title" content="HiddenYatra — Discover Bihar's Hidden Gems">
+<meta property="og:description" content="Explore ancient heritage, hidden waterfalls, local street food, and AI-powered trip planning across all 38 districts of Bihar.">
+<meta property="og:image" content="{{ url_for('static', filename='og-default.png', _external=True) }}">
+<meta property="og:url" content="{{ request.url }}">
+<meta property="og:type" content="website">
+
+<!-- Structured Data (JSON-LD) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "{{ request.url_root }}#website",
+      "url": "{{ request.url_root }}",
+      "name": "HiddenYatra",
+      "description": "Discover Bihar's Hidden Gems & Modern Tourism Platform",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "{{ request.url_root }}search?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      }
+    },
+    {
+      "@type": "TouristInformationCenter",
+      "@id": "{{ request.url_root }}#organization",
+      "name": "HiddenYatra",
+      "url": "{{ request.url_root }}",
+      "logo": "{{ url_for('static', filename='icon-192.png', _external=True) }}",
+      "description": "AI-Powered Tourism Platform showcasing Bihar's hidden places, food, and culture.",
+      "areaServed": "Bihar, India"
+    }
+  ]
+}
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ═══ IMMERSIVE HERO SECTION ═══ */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #070913;
+}
+
+/* Slideshow Background */
+.hero-slideshow {
+  position: absolute; inset: 0; z-index: 1;
+  overflow: hidden;
+  background: #070913;
+}
+
+@keyframes heroKenBurnsZoom {
+  0% {
+    transform: scale(1.0) translate(0, 0);
+  }
+  50% {
+    transform: scale(1.08) translate(-0.8%, -0.4%);
+  }
+  100% {
+    transform: scale(1.15) translate(0.8%, 0.4%);
+  }
+}
+
+.hero-slide {
+  position: absolute; inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  visibility: hidden;
+  z-index: 1;
+  transform: scale(1.04);
+  transition: opacity 1.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 1.6s ease;
+  will-change: opacity, transform, visibility;
+}
+
+.hero-slide.active {
+  opacity: 1;
+  visibility: visible;
+  z-index: 2;
+  animation: heroKenBurnsZoom 14s ease-out infinite alternate;
+}
+
+.hero-slideshow.effect-fade .hero-slide {
+  transition: opacity 1.8s ease-in-out, visibility 1.8s;
+  transform: scale(1.02);
+}
+
+.hero-slideshow.effect-crossfade .hero-slide {
+  transition: opacity 1.4s cubic-bezier(0.25, 1, 0.5, 1), visibility 1.4s;
+}
+
+/* Dark Overlay */
+.hero-overlay {
+  position: absolute; inset: 0; z-index: 2;
+  background: radial-gradient(circle at center, rgba(10,10,18,0.3) 0%, rgba(10,10,18,0.7) 70%, rgba(10,10,18,0.95) 100%),
+              linear-gradient(180deg, rgba(10,10,18,0.5) 0%, rgba(10,10,18,0.65) 50%, rgba(10,10,18,0.9) 100%);
+}
+
+/* Floating Particles */
+.hero-particles {
+  position: absolute; inset: 0; z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+}
+.particle {
+  position: absolute;
+  width: 3px; height: 3px;
+  background: rgba(255,255,255,0.4);
+  border-radius: 50%;
+  animation: particleFloat linear infinite;
+}
+@keyframes particleFloat {
+  0% { transform: translateY(100vh) translateX(0); opacity: 0; }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.8; }
+  100% { transform: translateY(-10vh) translateX(40px); opacity: 0; }
+}
+
+/* Hero Content */
+.hero-inner {
+  position: relative; z-index: 10;
+  text-align: center;
+  max-width: 860px;
+  padding: var(--space-2xl) var(--space-lg);
+}
+
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 8px 22px;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: var(--radius-full);
+  font-size: 0.85rem; font-weight: 600;
+  color: rgba(255,255,255,0.92);
+  margin-bottom: var(--space-xl);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  animation: heroFadeIn 0.8s ease 0.1s both;
+}
+.badge-dot {
+  width: 8px; height: 8px;
+  background: var(--secondary);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--secondary);
+  animation: dotPulse 2s ease-in-out infinite;
+}
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.4); }
+}
+
+.hero-title {
+  font-family: var(--font-heading);
+  font-size: clamp(2.6rem, 6.5vw, 4.4rem);
+  font-weight: 800;
+  line-height: 1.08;
+  color: white;
+  margin-bottom: var(--space-lg);
+  letter-spacing: -0.02em;
+}
+.hero-title-line1 {
+  display: block;
+  animation: heroFadeIn 0.8s ease 0.3s both;
+}
+.hero-title-line2 {
+  display: block;
+  animation: heroSlideUp 0.8s ease 0.5s both;
+  text-shadow: 0 0 50px rgba(0,191,166,0.35);
+}
+@keyframes heroFadeIn {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes heroSlideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-subtitle {
+  font-size: clamp(1rem, 2vw, 1.2rem);
+  color: rgba(255,255,255,0.8);
+  max-width: 660px;
+  margin: 0 auto var(--space-xl);
+  line-height: 1.7;
+  animation: heroFadeIn 0.8s ease 0.7s both;
+}
+
+/* Floating Glassmorphism Search Bar */
+.hero-search {
+  animation: heroFadeIn 0.8s ease 0.9s both;
+  margin-bottom: var(--space-xl);
+  position: relative;
+}
+.hero-search-wrapper {
+  display: flex; align-items: center;
+  max-width: 640px; margin: 0 auto;
+  background: rgba(255,255,255,0.09);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 60px;
+  padding: 6px 6px 6px 24px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+  transition: all 0.4s ease;
+}
+.hero-search-wrapper:focus-within {
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(255,122,24,0.5);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.5), 0 0 0 4px rgba(255,122,24,0.2), inset 0 1px 0 rgba(255,255,255,0.25);
+}
+.hero-search-icon { color: rgba(255,255,255,0.6); flex-shrink: 0; }
+.hero-search-input {
+  flex: 1; border: none; background: transparent;
+  padding: 14px 16px; font-size: 1.05rem;
+  color: white; outline: none;
+  font-family: var(--font-body);
+}
+.hero-search-input::placeholder { color: rgba(255,255,255,0.5); }
+.hero-search-btn {
+  padding: 14px 32px;
+  background: var(--gradient-primary);
+  border: none; border-radius: 50px;
+  color: white; font-weight: 700;
+  font-size: 0.98rem; cursor: pointer;
+  font-family: var(--font-body);
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  box-shadow: 0 4px 20px rgba(255,122,24,0.4);
+}
+.hero-search-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 28px rgba(255,122,24,0.6);
+}
+
+/* CTA Group */
+.hero-cta-group {
+  display: flex; gap: var(--space-md);
+  justify-content: center; flex-wrap: wrap;
+  margin-bottom: var(--space-lg);
+  animation: heroFadeIn 0.8s ease 1.1s both;
+}
+.hero-cta {
+  padding: 13px 30px;
+  border-radius: 50px;
+  font-weight: 600; font-size: 0.95rem;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  display: inline-flex; align-items: center; gap: 10px;
+}
+.hero-cta-primary {
+  background: var(--gradient-primary);
+  color: white;
+  box-shadow: 0 4px 24px rgba(255,122,24,0.35);
+}
+.hero-cta-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 32px rgba(255,122,24,0.5);
+  color: white;
+}
+.hero-cta-ai {
+  background: linear-gradient(135deg, rgba(99,102,241,0.25), rgba(139,92,246,0.25));
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(139,92,246,0.4);
+  color: #a7f3d0;
+  color: white;
+  box-shadow: 0 4px 20px rgba(99,102,241,0.25);
+}
+.hero-cta-ai:hover {
+  background: linear-gradient(135deg, rgba(99,102,241,0.4), rgba(139,92,246,0.4));
+  transform: translateY(-3px);
+  border-color: rgba(139,92,246,0.6);
+  color: white;
+  box-shadow: 0 8px 28px rgba(99,102,241,0.4);
+}
+.hero-cta-glass {
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: white;
+}
+.hero-cta-glass:hover {
+  background: rgba(255,255,255,0.16);
+  transform: translateY(-3px);
+  color: white;
+}
+
+/* Quick Links */
+.hero-quick-links {
+  display: flex; align-items: center; gap: 8px;
+  justify-content: center; flex-wrap: wrap;
+  animation: heroFadeIn 0.8s ease 1.3s both;
+}
+.hero-quick-links > span {
+  font-size: 0.85rem; color: rgba(255,255,255,0.5);
+  font-weight: 500;
+}
+.hero-quick-links a {
+  padding: 6px 16px;
+  border-radius: var(--radius-full);
+  font-size: 0.82rem; font-weight: 500;
+  color: rgba(255,255,255,0.8);
+  text-decoration: none;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+  transition: all 0.3s ease;
+}
+.hero-quick-links a:hover {
+  background: rgba(255,255,255,0.15);
+  color: white;
+  border-color: rgba(255,255,255,0.25);
+  transform: translateY(-2px);
+}
+
+/* Slide Dots */
+.hero-slide-dots {
+  position: absolute;
+  bottom: 80px; left: 50%; transform: translateX(-50%);
+  z-index: 10;
+  display: flex; gap: 8px;
+  animation: heroFadeIn 0.8s ease 1.5s both;
+}
+.hero-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  border: none; cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0;
+}
+.hero-dot.active {
+  background: var(--primary);
+  width: 28px;
+  border-radius: 4px;
+}
+
+/* Scroll Hint */
+.hero-scroll-hint {
+  position: absolute;
+  bottom: 24px; left: 50%; transform: translateX(-50%);
+  z-index: 10;
+  color: rgba(255,255,255,0.5);
+  font-size: 0.78rem; font-weight: 500;
+  text-align: center;
+  animation: heroFadeIn 0.8s ease 1.6s both;
+}
+.hero-scroll-arrow {
+  display: block; margin: 6px auto 0;
+  animation: scrollBounce 2s ease-in-out infinite;
+}
+@keyframes scrollBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+
+@media (max-width: 768px) {
+  .hero { min-height: 90vh; }
+  .hero-cta-group { flex-direction: column; align-items: center; }
+  .hero-search-wrapper { padding: 4px 4px 4px 18px; }
+  .hero-search-btn { padding: 12px 22px; font-size: 0.88rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- ═══ 1. PREMIUM HERO SECTION ═══ -->
+<section class="hero" id="hero" aria-label="Welcome Hero Banner">
+  <!-- Slideshow Background -->
+  <div class="hero-slideshow effect-{{ hero_settings.transition_effect if hero_settings else 'kenburns' }}" id="hero-slideshow">
+    {% if hero_media %}
+      {% for item in hero_media %}
+      <div class="hero-slide {% if loop.first %}active{% endif %}" {% if item.media_type == 'image' %}style="background-image:url('/static/hero/{{ item.filename }}')"{% endif %}>
+        {% if item.media_type == 'video' %}
+        <video autoplay muted loop playsinline style="width:100%;height:100%;object-fit:cover;"><source src="/static/hero/{{ item.filename }}" type="video/mp4"></video>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="hero-slide active" style="background-image:url('https://images.unsplash.com/photo-1609947017136-9daf32a15c8c?w=1920&q=80')"></div>
+      <div class="hero-slide" style="background-image:url('https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=1920&q=80')"></div>
+      <div class="hero-slide" style="background-image:url('https://images.unsplash.com/photo-1564507592333-c60657eea523?w=1920&q=80')"></div>
+      <div class="hero-slide" style="background-image:url('https://images.unsplash.com/photo-1548013146-72479768bada?w=1920&q=80')"></div>
+      <div class="hero-slide" style="background-image:url('https://images.unsplash.com/photo-1506461883276-594a12b11cf3?w=1920&q=80')"></div>
+    {% endif %}
+  </div>
+
+  <!-- Overlay -->
+  <div class="hero-overlay" style="background:linear-gradient(180deg,rgba(10,10,18,{{ hero_settings.overlay_opacity - 0.1 }}) 0%,rgba(10,10,18,{{ hero_settings.overlay_opacity }}) 40%,rgba(10,10,18,{{ hero_settings.overlay_opacity + 0.25 }}) 100%);"></div>
+
+  <!-- Floating Particles -->
+  <div class="hero-particles" id="hero-particles"></div>
+
+  <!-- Hero Content Container -->
+  <div class="hero-inner">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      Exploring Bihar — {{ stats.districts }} Districts • {{ stats.places }} Verified Places
+    </div>
+
+    <h1 class="hero-title">
+      <span class="hero-title-line1">Discover <span class="text-gradient-saffron">Bihar's</span></span>
+      <span class="hero-title-line2"><span class="text-gradient-teal">Hidden Treasures</span></span>
+    </h1>
+
+    <p class="hero-subtitle">
+      Explore ancient temples, hidden waterfalls, local street food, and AI-curated itineraries across every district — from Bodh Gaya to Madhubani.
+    </p>
+
+    <!-- Glass Search Bar -->
+    <form action="{{ url_for('main.search') }}" method="GET" class="hero-search" role="search">
+      <div class="hero-search-wrapper">
+        <svg class="hero-search-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" name="q" placeholder="Search any place, temple, local food, or district..." class="hero-search-input" autocomplete="off" id="hero-search-input" aria-label="Search destination or food">
+        <button type="submit" class="hero-search-btn">Explore</button>
+      </div>
+    </form>
+
+    <!-- CTAs -->
+    <div class="hero-cta-group">
+      <a href="{{ url_for('main.state_detail', slug='bihar') }}" class="hero-cta hero-cta-primary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        Explore Bihar
+      </a>
+      <a href="{{ url_for('itinerary.itinerary_page') }}" class="hero-cta hero-cta-ai">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        ✨ AI Trip Planner
+      </a>
+      <a href="{{ url_for('community.suggest_place') }}" class="hero-cta hero-cta-glass">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Suggest Place
+      </a>
+    </div>
+
+    <!-- Quick Tags -->
+    <div class="hero-quick-links">
+      <span>Popular:</span>
+      <a href="{{ url_for('main.search', q='Bodh Gaya') }}">🛕 Bodh Gaya</a>
+      <a href="{{ url_for('main.search', q='Rajgir') }}">🏔️ Rajgir</a>
+      <a href="{{ url_for('main.search', q='Nalanda') }}">📜 Nalanda</a>
+      <a href="{{ url_for('main.search', q='Vaishali') }}">🏛️ Vaishali</a>
+      <a href="{{ url_for('main.search', q='Litti Chokha') }}">🫓 Litti Chokha</a>
+    </div>
+  </div>
+
+  <!-- Slide Dots -->
+  <div class="hero-slide-dots" id="hero-slide-dots" aria-label="Hero Slideshow Controls">
+    {% set slide_count = hero_media|length if hero_media else 5 %}
+    {% for i in range(slide_count) %}
+    <button class="hero-dot {% if loop.first %}active{% endif %}" data-slide="{{ i }}" aria-label="Slide {{ i + 1 }}"></button>
+    {% endfor %}
+  </div>
+
+  <!-- Scroll Hint -->
+  <div class="hero-scroll-hint">
+    Scroll to explore
+    <svg class="hero-scroll-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+  </div>
+</section>
+
+<!-- ═══ LIVE STATISTICS TICKER ═══ -->
+<section class="stats-bar reveal" aria-label="Platform Statistics">
+  <div class="stat-item">
+    <span class="stat-number" data-target="{{ stats.districts }}">0</span>
+    <span class="stat-label">Districts</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-number" data-target="{{ stats.places }}">0</span>
+    <span class="stat-label">Verified Places</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-number" data-target="{{ stats.specialties }}">0</span>
+    <span class="stat-label">Local Foods</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-number" data-target="{{ stats.reviews }}">0</span>
+    <span class="stat-label">Explorer Reviews</span>
+  </div>
+</section>
+
+<!-- ═══ 2. FEATURED DESTINATIONS CAROUSEL ═══ -->
+{% if featured %}
+<section class="section reveal" id="featured-section">
+  <div class="section-header">
+    <div>
+      <h2 class="section-title">⭐ Featured <span class="text-gradient-saffron">Destinations</span></h2>
+      <p style="color:var(--text-muted);font-size:0.9rem;margin-top:4px;">Hand-picked iconic attractions you must visit in Bihar</p>
+    </div>
+    <a href="{{ url_for('main.search', q='featured') }}" class="section-link">View All ({% if featured %}{{ featured|length }}{% else %}0{% endif %}) →</a>
+  </div>
+  <div class="carousel-section">
+    <div class="carousel-track" id="featured-carousel">
+      {% for place in featured %}
+      {% include "partials/place_card.html" %}
+      {% endfor %}
+    </div>
+    <button class="carousel-btn carousel-btn-prev" onclick="scrollCarousel('featured-carousel', -1)" aria-label="Previous Featured Destination">❮</button>
+    <button class="carousel-btn carousel-btn-next" onclick="scrollCarousel('featured-carousel', 1)" aria-label="Next Featured Destination">❯</button>
+  </div>
+</section>
+{% endif %}
+
+<!-- ═══ 3. TRENDING DESTINATIONS GRID ═══ -->
+{% if trending %}
+<section class="section reveal" id="trending-section">
+  <div class="section-header">
+    <div>
+      <h2 class="section-title">🔥 Trending <span class="text-gradient-teal">Right Now</span></h2>
+      <p style="color:var(--text-muted);font-size:0.9rem;margin-top:4px;">Most viewed & reviewed spots by travelers this week</p>
+    </div>
+    <a href="{{ url_for('main.search', q='trending') }}" class="section-link">Explore Trending →</a>
+  </div>
+  <div class="places-grid stagger-children">
+    {% for place in trending[:4] %}
+    {% include "partials/place_card.html" %}
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- ═══ 4. EXPLORE BIHAR BY DISTRICT ═══ -->
+{% if districts %}
+<section class="section reveal">
+  <div class="section-header">
+    <div>
+      <h2 class="section-title">🗺️ Explore Bihar by <span class="text-gradient-saffron">District</span></h2>
+      <p style="color:var(--text-muted);font-size:0.9rem;margin-top:4px;">Browse hidden gems sorted by all 38 districts</p>
+    </div>
+    <a href="{{ url_for('main.state_detail', slug='bihar') }}" class="section-link">All 38 Districts →</a>
+  </div>
+  <div class="districts-visual-grid stagger-children">
+    {% set district_colors = ['#FF7A18', '#00BFA6', '#6366F1', '#F43F5E', '#8B5CF6', '#3B82F6', '#F59E0B', '#10B981', '#06B6D4', '#EC4899', '#14B8A6', '#EF4444'] %}
+    {% for d in districts[:12] %}
+    <a href="{{ url_for('main.district_detail', state_slug='bihar', district_slug=d.slug) }}" class="district-visual-card" id="district-card-{{ d.slug }}">
+      <div class="district-visual-bg" style="background: {% if d.cover_image %}url('{% if d.cover_image.startswith('http') %}{{ d.cover_image }}{% else %}{{ url_for('static', filename='uploads/districts/' + d.cover_image) }}{% endif %}') center/cover{% elif d.image_url %}url('{{ d.image_url }}') center/cover{% else %}linear-gradient(135deg, {{ district_colors[loop.index0 % 12] }}22, {{ district_colors[(loop.index0 + 3) % 12] }}22){% endif %};"></div>
+      <div class="district-visual-overlay"></div>
+      <div class="district-visual-content">
+        <h3 class="district-visual-name">{{ d.name }}</h3>
+        <span class="district-visual-count">{{ d.place_count }} places</span>
+        {% if d.famous_for %}
+        <span class="district-visual-famous">{{ d.famous_for }}</span>
+        {% endif %}
+        <span class="district-visual-explore">Explore →</span>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<!-- ═══ 5. WHY HIDDENYATRA SECTION (6 Feature Cards) ═══ -->
+<section class="section reveal" id="why-section">
+  <div class="section-header" style="text-align:center;margin-bottom:var(--space-2xl);">
+    <div>
+      <h2 class="section-title">Why Explore with <span class="text-gradient-saffron">HiddenYatra</span>?</h2>
+      <p style="color:var(--text-muted);max-width:580px;margin:8px auto 0;">The complete digital ecosystem built for travelers discovering Bihar's rich heritage & culture.</p>
+    </div>
+  </div>
+
+  <div class="why-grid stagger-children">
+    <!-- Feature 1 -->
+    <div class="why-card" style="--card-accent:linear-gradient(90deg, #FF7A18, #F59E0B);">
+      <div class="why-icon-box" style="background:rgba(255,122,24,0.12);color:#FF7A18;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </div>
+      <h3 class="why-title">100% Verified Gems</h3>
+      <p class="why-desc">Detailed info, authentic photos, and accurate GPS coordinates for hidden places across all 38 Bihar districts.</p>
+    </div>
+
+    <!-- Feature 2 -->
+    <div class="why-card" style="--card-accent:linear-gradient(90deg, #6366F1, #8B5CF6);">
+      <div class="why-icon-box" style="background:rgba(99,102,241,0.12);color:#818cf8;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <h3 class="why-title">AI Trip Planner</h3>
+      <p class="why-desc">Instant custom itineraries tailored to your trip duration, budget, and favorite travel styles.</p>
+    </div>
+
+    <!-- Feature 3 -->
+    <div class="why-card" style="--card-accent:linear-gradient(90deg, #00BFA6, #10B981);">
+      <div class="why-icon-box" style="background:rgba(0,191,166,0.12);color:#00BFA6;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+      </div>
+      <h3 class="why-title">Local Food & Culture</h3>
+      <p class="why-desc">Discover iconic delicacies from Litti Chokha to Tilkut and regional cultural heritage guides.</p>
+    </div>
+
+    <!-- Feature 4 -->
+    <div class="why-card" style="--card-accent:linear-gradient(90deg, #3B82F6, #06B6D4);">
+      <div class="why-icon-box" style="background:rgba(59,130,246,0.12);color:#3B82F6;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+      </div>
+      <h3 class="why-title">Interactive GIS Map</h3>
+      <p class="why-desc">Full-screen map exploration with category filters, route planning, and real-time distance calculations.</p>
+    </div>
+
+    <!-- Feature 5 -->
+    <div class="why-card" style="--card-accent:linear-gradient(90deg, #EC4899, #F43F5E);">
+      <div class="why-icon-box" style="background:rgba(236,72,153,0.12);color:#EC4899;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <h3 class="why-title">Community Verified</h3>
+      <p class="why-desc">Honest ratings, traveler reviews, and user-submitted photos from real explorers who visited Bihar.</p>
+    </div>
+
+    <!-- Feature 6 -->
+    <div class="why-card" style="--card-accent:linear-gradient(90deg, #F59E0B, #EF4444);">
+      <div class="why-icon-box" style="background:rgba(245,158,11,0.12);color:#F59E0B;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <h3 class="why-title">Essential Services</h3>
+      <p class="why-desc">Instant access to nearby hospitals, ATMs, police stations, and petrol pumps for a safe journey.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 6. AI TRIP PLANNER CTA BANNER ═══ -->
+<section class="section reveal" id="ai-banner-section">
+  <div class="ai-planner-banner">
+    <div class="ai-planner-content">
+      <div>
+        <div class="ai-planner-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          AI-Powered Travel Engine
+        </div>
+        <h2 class="ai-planner-title">Plan Your Perfect <span class="text-gradient-teal">Bihar Trip</span> in Seconds</h2>
+        <p style="color:rgba(255,255,255,0.75);margin-bottom:var(--space-lg);font-size:1.02rem;line-height:1.7;">
+          Let our intelligent AI engine curate a personalized day-by-day itinerary tailored to your schedule, travel preferences, and budget.
+        </p>
+        
+        <div class="ai-planner-features">
+          <div class="ai-planner-feat-item">
+            <span class="ai-planner-feat-icon">✓</span>
+            <span>Instant 1-7 day customizable itineraries</span>
+          </div>
+          <div class="ai-planner-feat-item">
+            <span class="ai-planner-feat-icon">✓</span>
+            <span>Intelligent grouping of nearby destinations</span>
+          </div>
+          <div class="ai-planner-feat-item">
+            <span class="ai-planner-feat-icon">✓</span>
+            <span>Real budget calculation & travel time estimates</span>
+          </div>
+        </div>
+
+        <a href="{{ url_for('itinerary.itinerary_page') }}" class="btn btn-primary btn-lg" style="gap:10px;box-shadow:0 8px 30px rgba(255,122,24,0.4);">
+          ✨ Launch AI Trip Planner →
+        </a>
+      </div>
+
+      <div class="ai-planner-graphic">
+        <div class="ai-graphic-card">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.1);">
+            <span style="font-size:1.6rem;">🗺️</span>
+            <div>
+              <div style="font-weight:700;color:white;font-size:0.95rem;">3-Day Bodh Gaya & Rajgir</div>
+              <div style="font-size:0.75rem;color:rgba(255,255,255,0.6);">AI Generated • 5 Places</div>
+            </div>
+          </div>
+          <div style="font-size:0.8rem;color:rgba(255,255,255,0.75);display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span>Day 1: Mahabodhi Temple</span>
+              <span style="color:var(--secondary);font-weight:600;">Morning</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span>Day 2: Nalanda Ruins</span>
+              <span style="color:var(--primary-300);font-weight:600;">Afternoon</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <span>Est. Budget</span>
+              <span style="color:#FBBF24;font-weight:700;">₹4,200</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 7. CATEGORIES GRID ═══ -->
+<section class="section reveal">
+  <div class="section-header">
+    <h2 class="section-title">Explore by <span class="text-gradient-teal">Category</span></h2>
+    <a href="{{ url_for('main.search', q='all') }}" class="section-link">View All Categories →</a>
+  </div>
+  <div class="categories-grid stagger-children">
+    {% for code, label in categories %}
+    <a href="{{ url_for('main.search', q=code) }}" class="category-card" id="category-{{ code }}" aria-label="Explore {{ label }}">
+      <span class="category-emoji">{{ label.split(' ')[0] }}</span>
+      <span class="category-name">{{ ' '.join(label.split(' ')[1:]) }}</span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- ═══ 8. TESTIMONIALS AUTO CAROUSEL ═══ -->
+<section class="section reveal" id="testimonials-section">
+  <div class="section-header" style="text-align:center;margin-bottom:var(--space-2xl);">
+    <div>
+      <h2 class="section-title">What Explorers <span class="text-gradient-saffron">Say</span></h2>
+      <p style="color:var(--text-muted);max-width:500px;margin:8px auto 0;">Real feedback from visitors who discovered Bihar through HiddenYatra</p>
+    </div>
+  </div>
+
+  <div class="testimonials-section-wrap">
+    <div class="testimonials-carousel-container" id="testimonials-container">
+      <div class="testimonials-track" id="testimonials-track">
+        <!-- Card 1 -->
+        <div class="testimonial-card-v2">
+          <div class="testimonial-quote-icon">❝</div>
+          <div>
+            <div class="testimonial-stars">★★★★★</div>
+            <p class="testimonial-text">"Bihar has so many hidden treasures. This platform helped me discover waterfalls in Rohtas I never knew existed. The itinerary planner saved me hours of research!"</p>
+          </div>
+          <div class="testimonial-user">
+            <div class="testimonial-avatar" style="background:linear-gradient(135deg,var(--primary),#e0620e);">R</div>
+            <div>
+              <div class="testimonial-name">Rahul Sharma</div>
+              <div class="testimonial-tag">Visited 8 places • Verified Explorer</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="testimonial-card-v2">
+          <div class="testimonial-quote-icon">❝</div>
+          <div>
+            <div class="testimonial-stars">★★★★★</div>
+            <p class="testimonial-text">"The AI trip planner is brilliant! It grouped nearby places intelligently in Rajgir and even estimated my budget accurately. Made our family trip seamless."</p>
+          </div>
+          <div class="testimonial-user">
+            <div class="testimonial-avatar" style="background:linear-gradient(135deg,var(--secondary),#0d9488);">A</div>
+            <div>
+              <div class="testimonial-name">Ananya Roy</div>
+              <div class="testimonial-tag">3-day explorer • Kolkata</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="testimonial-card-v2">
+          <div class="testimonial-quote-icon">❝</div>
+          <div>
+            <div class="testimonial-stars">★★★★★</div>
+            <p class="testimonial-text">"As a history enthusiast, finding Nalanda and Vikramshila through this platform was a dream. The nearby services feature helped me locate clean hotels easily."</p>
+          </div>
+          <div class="testimonial-user">
+            <div class="testimonial-avatar" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);">D</div>
+            <div>
+              <div class="testimonial-name">Deepak Joshi</div>
+              <div class="testimonial-tag">Heritage Traveler • Delhi</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="testimonial-card-v2">
+          <div class="testimonial-quote-icon">❝</div>
+          <div>
+            <div class="testimonial-stars">★★★★★</div>
+            <p class="testimonial-text">"The Food & Culture section introduced me to genuine Litti Chokha spots and Tilkut in Gaya. Essential guide for foodies exploring Bihar!"</p>
+          </div>
+          <div class="testimonial-user">
+            <div class="testimonial-avatar" style="background:linear-gradient(135deg,#f43f5e,#ec4899);">P</div>
+            <div>
+              <div class="testimonial-name">Priya Verma</div>
+              <div class="testimonial-tag">Food Explorer • Patna</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Carousel Dots -->
+    <div class="testimonial-dots" id="testimonial-dots">
+      <button class="testimonial-dot active" data-index="0" aria-label="Testimonial 1"></button>
+      <button class="testimonial-dot" data-index="1" aria-label="Testimonial 2"></button>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 9. EXPLORE MAP & COMMUNITY CALLOUT ═══ -->
+<section class="section reveal">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:var(--space-xl);">
+    <div class="explore-cta">
+      <h2 class="explore-cta-title">🗺️ Explore <span class="text-gradient-teal">Bihar on Map</span></h2>
+      <p class="explore-cta-desc">Discover places on an interactive full-screen map. Filter by district, category, or find attractions near your location.</p>
+      <a href="{{ url_for('main.explore_map') }}" class="btn btn-primary btn-lg">Open Interactive Map →</a>
+    </div>
+
+    <div class="community-cta">
+      <h2>✨ Know a Hidden Gem?</h2>
+      <p>Help fellow travelers discover Bihar's hidden treasures. Submit a place and share your local knowledge with the world!</p>
+      <a href="{{ url_for('community.suggest_place') }}" class="btn btn-primary btn-lg">Suggest a Place ✨</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  'use strict';
+
+  // ── HERO SLIDESHOW ENGINE ──
+  const slides = document.querySelectorAll('.hero-slide');
+  const dots = document.querySelectorAll('.hero-dot');
+  const bgType = '{{ hero_settings.bg_type if hero_settings else "slideshow" }}';
+  let currentSlide = 0;
+  let slideInterval;
+
+  function goToSlide(index) {
+    if (!slides.length) return;
+    slides[currentSlide].classList.remove('active');
+    if (dots[currentSlide]) dots[currentSlide].classList.remove('active');
+    currentSlide = (index + slides.length) % slides.length;
+    slides[currentSlide].classList.add('active');
+    if (dots[currentSlide]) dots[currentSlide].classList.add('active');
+
+    // Auto-play videos if present in active slide
+    const vid = slides[currentSlide].querySelector('video');
+    if (vid) {
+      vid.currentTime = 0;
+      vid.play().catch(() => {});
+    }
+  }
+
+  function nextSlide() {
+    goToSlide(currentSlide + 1);
+  }
+
+  function startSlideshow() {
+    if (bgType !== 'single' && slides.length > 1) {
+      clearInterval(slideInterval);
+      slideInterval = setInterval(nextSlide, {{ hero_settings.slideshow_interval * 1000 if hero_settings else 6000 }});
+    }
+  }
+
+  dots.forEach(dot => {
+    dot.addEventListener('click', () => {
+      clearInterval(slideInterval);
+      goToSlide(parseInt(dot.dataset.slide));
+      startSlideshow();
+    });
+  });
+
+  startSlideshow();
+
+  // Pause slideshow on hover for desktop
+  const heroEl = document.getElementById('hero');
+  if (heroEl) {
+    heroEl.addEventListener('mouseenter', () => clearInterval(slideInterval));
+    heroEl.addEventListener('mouseleave', () => startSlideshow());
+
+    // Mobile Touch Swipe
+    let touchStartX = 0;
+    heroEl.addEventListener('touchstart', (e) => {
+      if (e.changedTouches.length) touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    heroEl.addEventListener('touchend', (e) => {
+      if (!e.changedTouches.length) return;
+      const touchEndX = e.changedTouches[0].screenX;
+      const diff = touchStartX - touchEndX;
+      if (Math.abs(diff) > 40) {
+        clearInterval(slideInterval);
+        if (diff > 0) nextSlide();
+        else goToSlide(currentSlide - 1);
+        startSlideshow();
+      }
+    }, { passive: true });
+  }
+
+  // ── FLOATING PARTICLES ──
+  const particleContainer = document.getElementById('hero-particles');
+  if (particleContainer) {
+    for (let i = 0; i < 32; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.left = Math.random() * 100 + '%';
+      const size = (Math.random() * 3.5 + 1);
+      p.style.width = size + 'px';
+      p.style.height = size + 'px';
+      p.style.animationDuration = (Math.random() * 14 + 10) + 's';
+      p.style.animationDelay = (Math.random() * 10) + 's';
+      p.style.opacity = (Math.random() * 0.6 + 0.2).toString();
+      particleContainer.appendChild(p);
+    }
+  }
+
+  // ── ANIMATED STATISTICS COUNTER ──
+  const statNumbers = document.querySelectorAll('.stat-number');
+  let statsAnimated = false;
+
+  function animateStats() {
+    if (statsAnimated) return;
+    statsAnimated = true;
+    statNumbers.forEach(num => {
+      const target = parseInt(num.dataset.target) || 0;
+      if (target === 0) return;
+      const duration = 2000;
+      const startTime = performance.now();
+
+      function updateCount(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        // EaseOutQuad formula
+        const currentCount = Math.floor(progress * (2 - progress) * target);
+        num.textContent = currentCount.toLocaleString();
+
+        if (progress < 1) {
+          requestAnimationFrame(updateCount);
+        } else {
+          num.textContent = target.toLocaleString();
+        }
+      }
+      requestAnimationFrame(updateCount);
+    });
+  }
+
+  // ── SCROLL REVEAL OBSERVER ENGINE ──
+  const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        if (e.target.classList.contains('stats-bar')) {
+          animateStats();
+        }
+        revealObserver.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale, .stats-bar').forEach(el => {
+    revealObserver.observe(el);
+  });
+
+  // ── TESTIMONIALS AUTO CAROUSEL ──
+  const testTrack = document.getElementById('testimonials-track');
+  const testDots = document.querySelectorAll('.testimonial-dot');
+  let testIndex = 0;
+  let testInterval;
+
+  function updateTestimonial(idx) {
+    if (!testTrack || !testDots.length) return;
+    testDots[testIndex].classList.remove('active');
+    testIndex = idx % testDots.length;
+    testDots[testIndex].classList.add('active');
+    const offset = testIndex * 50; // shift percentage
+    testTrack.style.transform = `translateX(-${offset}%)`;
+  }
+
+  function startTestimonialTimer() {
+    testInterval = setInterval(() => {
+      updateTestimonial(testIndex + 1);
+    }, 6000);
+  }
+
+  testDots.forEach(dot => {
+    dot.addEventListener('click', () => {
+      clearInterval(testInterval);
+      updateTestimonial(parseInt(dot.dataset.index));
+      startTestimonialTimer();
+    });
+  });
+
+  const testContainer = document.getElementById('testimonials-container');
+  if (testContainer) {
+    testContainer.addEventListener('mouseenter', () => clearInterval(testInterval));
+    testContainer.addEventListener('mouseleave', () => startTestimonialTimer());
+    startTestimonialTimer();
+  }
+
+})();
+</script>
+{% endblock %}

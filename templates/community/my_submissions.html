@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}My Submissions — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <h1 class="page-title">My <span class="text-gradient-saffron">Submissions</span></h1>
+  <p class="page-subtitle">Track the status of places you've shared</p>
+</section>
+
+<section class="section">
+  {% if submissions %}
+  <div class="submissions-list stagger-children">
+    {% for sub in submissions %}
+    <div class="submission-card">
+      <div class="submission-header">
+        <h3>{{ sub.place_name }}</h3>
+        <span class="submission-status status-{{ sub.status }}">{{ sub.status | upper }}</span>
+      </div>
+      {% if sub.district_name %}<p class="submission-meta">📍 {{ sub.district_name }}, Bihar</p>{% endif %}
+      {% if sub.short_description %}<p class="submission-desc">{{ sub.short_description }}</p>
+      {% elif sub.description %}<p class="submission-desc">{{ sub.description[:150] }}{% if sub.description|length > 150 %}...{% endif %}</p>{% endif %}
+      <p class="submission-date">Submitted: {{ sub.created_at.strftime('%Y-%m-%d') if sub.created_at else '' }}</p>
+      {% if sub.admin_notes %}
+      <p class="submission-admin-note">💬 Admin: {{ sub.admin_notes }}</p>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <span class="empty-icon">📝</span>
+    <h3>No submissions yet</h3>
+    <p>Share a hidden gem you know!</p>
+    <a href="{{ url_for('community.suggest_place') }}" class="btn btn-primary" style="margin-top:var(--space-md);">Share a Place 💎</a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

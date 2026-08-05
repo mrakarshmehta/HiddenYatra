@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 70" width="340" height="70">
+  <g transform="translate(5, -8)">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="75" height="75">
+  <!-- Bottom-left Teal Trail Line -->
+  <path d="M10 82 Q 18 78 24 82 Q 30 86 36 72" fill="none" stroke="#00BFA6" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Orange Location Pin Body -->
+  <path d="M50 8 C 30 8 18 24 18 42 C 18 64 50 92 50 92 C 50 92 82 64 82 42 C 82 24 70 8 50 8 Z" fill="#FF7A18"/>
+  
+  <!-- Inner White Circle -->
+  <circle cx="50" cy="40" r="14" fill="#FFFFFF"/>
+  
+  <!-- Center Teal Dot -->
+  <circle cx="50" cy="40" r="6.5" fill="#00BFA6"/>
+</svg>
+
+  </g>
+  <text x="85" y="52" font-family="'Poppins', 'Inter', -apple-system, sans-serif" font-weight="800" font-size="36" fill="#0F172A">Hidden<tspan fill="#FF7A18">Yatra</tspan></text>
+</svg>

@@ -1,0 +1,48 @@
+# ═══════════════════════════════════════════════════════
+# HiddenYatra — Render Blueprint
+# Auto-deploy from Git with Render PaaS
+# https://render.com/docs/blueprint-spec
+# ═══════════════════════════════════════════════════════
+
+services:
+  - type: web
+    name: hiddenyatra
+    runtime: python
+    region: singapore        # Closest to India
+    plan: starter            # $7/month
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -c gunicorn.conf.py wsgi:app
+    healthCheckPath: /health
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        sync: false          # Set manually in dashboard
+      - key: DB_HOST
+        sync: false          # Set to external MySQL host
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_NAME
+        value: hiddenyatra
+      - key: DB_USER
+        sync: false          # Set to external MySQL user
+      - key: DB_PASSWORD
+        sync: false          # Set to external MySQL password
+      - key: DB_POOL_SIZE
+        value: "3"
+      - key: DB_POOL_MAX
+        value: "10"
+      - key: GUNICORN_WORKERS
+        value: "2"
+      - key: GUNICORN_THREADS
+        value: "2"
+      - key: FORWARDED_ALLOW_IPS
+        value: "*"
+      - key: PYTHON_VERSION
+        value: "3.13.0"
+    disk:
+      name: uploads
+      mountPath: /opt/render/project/src/static/uploads
+      sizeGB: 1

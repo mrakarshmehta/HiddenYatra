@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}File Too Large — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="auth-page">
+  <div class="auth-card" style="text-align:center;">
+    <span style="font-size:4rem;display:block;margin-bottom:var(--space-md);">📦</span>
+    <h1>File Too Large</h1>
+    <p style="color:var(--text-secondary);margin-bottom:var(--space-xl);">Maximum upload size is 16 MB.</p>
+    <a href="{{ url_for('main.index') }}" class="btn btn-primary">← Back to Home</a>
+  </div>
+</section>
+{% endblock %}

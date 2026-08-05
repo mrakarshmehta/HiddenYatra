@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+{% block title %}AI Trip Planner — {{ app_name }}{% endblock %}
+{% block meta_desc %}Plan your perfect Bihar trip with our AI-powered trip planner. Get smart itineraries, budget estimates, and more.{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ═══ AI TRIP PLANNER ═══ */
+.planner-hero { text-align:center; padding:var(--space-3xl) var(--space-lg) var(--space-xl); }
+.planner-hero h1 { font-family:var(--font-heading); font-size:clamp(2rem,4vw,3rem); font-weight:800; margin-bottom:var(--space-sm); }
+.planner-hero .ai-badge { display:inline-flex; align-items:center; gap:6px; padding:6px 16px; background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(20,184,166,.15)); border:1px solid rgba(99,102,241,.3); border-radius:var(--radius-full); font-size:.8rem; font-weight:600; color:var(--secondary); margin-bottom:var(--space-lg); }
+.planner-hero .ai-badge svg { animation:aiPulse 2s ease infinite; }
+@keyframes aiPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.6;transform:scale(1.15)} }
+
+/* Planner Form */
+.planner-form { max-width:700px; margin:0 auto var(--space-2xl); background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-xl); padding:var(--space-xl); }
+.form-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:var(--space-md); margin-bottom:var(--space-lg); }
+.form-group label { display:block; font-size:.85rem; font-weight:600; color:var(--text-secondary); margin-bottom:var(--space-xs); }
+.form-group select, .form-group input[type=number] { width:100%; padding:10px 14px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg); color:var(--text-primary); font-size:.95rem; }
+.form-group select:focus, .form-group input:focus { outline:none; border-color:var(--primary); box-shadow:0 0 0 3px rgba(255,122,24,.15); }
+
+/* Interest Tags */
+.interest-tags { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:var(--space-lg); }
+.interest-tag { padding:8px 16px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-full); cursor:pointer; font-size:.85rem; transition:all .2s; user-select:none; }
+.interest-tag:hover { border-color:var(--primary); }
+.interest-tag.selected { background:linear-gradient(135deg,rgba(255,122,24,.15),rgba(255,122,24,.05)); border-color:var(--primary); color:var(--primary); font-weight:600; }
+
+/* Generate Button */
+.btn-generate { width:100%; padding:14px; font-size:1.05rem; font-weight:700; background:linear-gradient(135deg,var(--primary),#e0620e); border:none; border-radius:var(--radius-lg); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; transition:all .3s; }
+.btn-generate:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(255,122,24,.3); }
+.btn-generate:disabled { opacity:.6; cursor:not-allowed; transform:none; }
+.btn-generate .spinner { width:20px; height:20px; border:3px solid rgba(255,255,255,.3); border-top-color:#fff; border-radius:50%; animation:spin .8s linear infinite; display:none; }
+.btn-generate.loading .spinner { display:block; }
+.btn-generate.loading .btn-text { display:none; }
+@keyframes spin { to{transform:rotate(360deg)} }
+
+/* Results */
+.trip-result { max-width:800px; margin:0 auto; animation:fadeInUp .6s ease; }
+@keyframes fadeInUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+.trip-result-header { text-align:center; margin-bottom:var(--space-xl); }
+.trip-result-header h2 { font-family:var(--font-heading); font-size:1.8rem; font-weight:700; }
+
+/* Budget Card */
+.budget-card { background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-xl); padding:var(--space-lg); margin-bottom:var(--space-xl); }
+.budget-card h3 { font-size:1.1rem; font-weight:700; margin-bottom:var(--space-md); display:flex; align-items:center; gap:8px; }
+.budget-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:var(--space-md); }
+.budget-item { text-align:center; padding:var(--space-md); background:var(--bg-secondary); border-radius:var(--radius-lg); }
+.budget-item .amount { font-size:1.3rem; font-weight:700; color:var(--primary); }
+.budget-item .label { font-size:.78rem; color:var(--text-muted); margin-top:4px; }
+.budget-total { text-align:center; margin-top:var(--space-md); padding-top:var(--space-md); border-top:1px solid var(--border-color); }
+.budget-total .amount { font-size:1.6rem; font-weight:800; background:linear-gradient(135deg,var(--primary),var(--secondary)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+
+/* Day Timeline */
+.day-card { background:var(--bg-card); border:1px solid var(--border-color); border-radius:var(--radius-xl); margin-bottom:var(--space-lg); overflow:hidden; }
+.day-header { padding:var(--space-md) var(--space-lg); background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(20,184,166,.05)); border-bottom:1px solid var(--border-color); display:flex; align-items:center; gap:12px; }
+.day-num { width:36px; height:36px; background:linear-gradient(135deg,var(--primary),#e0620e); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.9rem; color:#fff; flex-shrink:0; }
+.day-title { font-weight:700; font-size:1.05rem; }
+.day-places { padding:var(--space-md) var(--space-lg); }
+.timeline-item { display:flex; gap:var(--space-md); padding:var(--space-md) 0; border-bottom:1px solid rgba(255,255,255,.04); position:relative; }
+.timeline-item:last-child { border-bottom:none; }
+.timeline-time { width:70px; flex-shrink:0; font-size:.82rem; font-weight:600; color:var(--secondary); padding-top:2px; }
+.timeline-content { flex:1; }
+.timeline-content h4 { font-weight:600; margin-bottom:4px; }
+.timeline-content h4 a { color:var(--text-primary); text-decoration:none; }
+.timeline-content h4 a:hover { color:var(--primary); }
+.timeline-meta { font-size:.8rem; color:var(--text-muted); display:flex; gap:var(--space-md); }
+.timeline-dot { position:absolute; left:-28px; top:18px; width:10px; height:10px; background:var(--primary); border-radius:50%; }
+
+/* Action Buttons */
+.trip-actions { display:flex; gap:var(--space-md); justify-content:center; margin-top:var(--space-xl); flex-wrap:wrap; }
+.btn-save-trip { padding:12px 28px; background:linear-gradient(135deg,var(--secondary),#0d9488); border:none; border-radius:var(--radius-lg); color:#fff; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:8px; transition:all .3s; }
+.btn-save-trip:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(20,184,166,.3); }
+.btn-print { padding:12px 28px; background:var(--bg-secondary); border:1px solid var(--border-color); border-radius:var(--radius-lg); color:var(--text-primary); font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; transition:all .2s; }
+.btn-print:hover { border-color:var(--primary); }
+.btn-regenerate { padding:12px 28px; background:transparent; border:1px solid var(--border-color); border-radius:var(--radius-lg); color:var(--text-secondary); cursor:pointer; font-weight:600; transition:all .2s; }
+.btn-regenerate:hover { border-color:var(--primary); color:var(--primary); }
+
+/* Existing Trips Section */
+.existing-trips { max-width:800px; margin:var(--space-2xl) auto 0; }
+.existing-trips h3 { font-size:1.2rem; font-weight:700; margin-bottom:var(--space-lg); }
+
+/* Print Styles */
+@media print {
+  .navbar,.footer,.planner-form,.trip-actions,.existing-trips,.btn-generate,.ai-badge,.loading-bar { display:none!important; }
+  .trip-result { max-width:100%; }
+  .day-card { break-inside:avoid; border:1px solid #ddd; }
+  body { background:#fff; color:#000; }
+  .budget-card,.day-card { background:#fff; }
+  .budget-item .amount { color:#e06010; }
+  .day-num { background:#e06010!important; }
+}
+
+/* Mobile */
+@media(max-width:600px) {
+  .form-row { grid-template-columns:1fr; }
+  .budget-grid { grid-template-columns:repeat(2,1fr); }
+  .trip-actions { flex-direction:column; }
+  .trip-actions button { width:100%; justify-content:center; }
+  .timeline-time { width:55px; font-size:.75rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<div class="planner-hero">
+  <div class="ai-badge">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+    AI-Powered
+  </div>
+  <h1>Trip <span class="text-gradient">Planner</span></h1>
+  <p class="page-subtitle">Plan your perfect Bihar adventure in seconds</p>
+</div>
+
+<!-- Planner Form -->
+<section class="section">
+  <div class="planner-form" id="planner-form">
+    <div class="form-row">
+      <div class="form-group">
+        <label>📅 Trip Duration</label>
+        <select id="trip-days">
+          <option value="1">1 Day (Flash Tour)</option>
+          <option value="2">2 Days (Weekend Getaway)</option>
+          <option value="3" selected>3 Days (Classic Explorer)</option>
+          <option value="5">5 Days (Grand Bihar Tour)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>👥 Travel Mode</label>
+        <select id="trip-companion">
+          <option value="solo" selected>👤 Solo Explorer</option>
+          <option value="couple">👩‍❤️‍👨 Couple Getaway</option>
+          <option value="family">👨‍👩‍👧‍👦 Family Trip</option>
+          <option value="group">👥 Group Trip</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>💰 Budget Level</label>
+        <select id="trip-budget">
+          <option value="low">Budget (₹1,500/day)</option>
+          <option value="medium" selected>Standard (₹3,500/day)</option>
+          <option value="high">Luxury (₹7,500+/day)</option>
+        </select>
+      </div>
+    </div>
+
+    <label style="display:block;font-size:.85rem;font-weight:600;color:var(--text-secondary);margin-bottom:var(--space-sm);">🎯 Favorite Interests</label>
+    <div class="interest-tags" id="interest-tags">
+      <span class="interest-tag" data-cat="temple">🛕 Temples</span>
+      <span class="interest-tag" data-cat="historical">🏛️ Historical</span>
+      <span class="interest-tag" data-cat="nature">🌿 Nature</span>
+      <span class="interest-tag" data-cat="waterfall">💧 Waterfalls</span>
+      <span class="interest-tag" data-cat="tourist_spot">📍 Tourist Spots</span>
+      <span class="interest-tag" data-cat="fort">🏰 Forts</span>
+      <span class="interest-tag" data-cat="religious">🙏 Religious</span>
+      <span class="interest-tag" data-cat="hidden_gem">💎 Hidden Gems</span>
+    </div>
+
+    <button class="btn-generate" id="btn-generate" onclick="generateTrip()">
+      <span class="spinner"></span>
+      <span class="btn-text">✨ Generate AI Trip Plan</span>
+    </button>
+  </div>
+
+  <!-- Results Container -->
+  <div id="trip-results" style="display:none;"></div>
+
+  <!-- Existing Trips -->
+  {% if itineraries %}
+  <div class="existing-trips">
+    <h3>📋 Your Saved Trips</h3>
+    <div class="places-grid stagger-children">
+      {% for trip in itineraries %}
+      <a href="{{ url_for('itinerary.view_trip', itinerary_id=trip.id) }}" class="place-card reveal-card revealed" style="text-decoration:none;">
+        <div class="place-card-image" style="height:100px;background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(20,184,166,.08));display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:2.5rem;">🗺️</span>
+        </div>
+        <div class="place-card-body">
+          <h3 class="place-card-title">{{ trip.name }}</h3>
+          <div class="place-card-meta">
+            <span>📍 {{ trip.item_count }} places</span>
+            <span>📅 {{ trip.created_at.strftime('%b %d') if trip.created_at else '' }}</span>
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Interest tag selection
+document.querySelectorAll('.interest-tag').forEach(tag => {
+  tag.addEventListener('click', () => tag.classList.toggle('selected'));
+});
+
+let currentTrip = null;
+
+async function generateTrip() {
+  const btn = document.getElementById('btn-generate');
+  const results = document.getElementById('trip-results');
+  btn.classList.add('loading');
+  btn.disabled = true;
+
+  const interests = [...document.querySelectorAll('.interest-tag.selected')]
+    .map(t => t.dataset.cat);
+
+  try {
+    const res = await fetch('/api/itinerary/generate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': '{{ session.get("_csrf_token","") }}'
+      },
+      body: JSON.stringify({
+        days: parseInt(document.getElementById('trip-days').value),
+        companion: document.getElementById('trip-companion').value,
+        budget: document.getElementById('trip-budget').value,
+        interests: interests
+      })
+    });
+    currentTrip = await res.json();
+    renderTrip(currentTrip);
+    results.style.display = 'block';
+    results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch(e) {
+    alert('Failed to generate trip. Please try again.');
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = false;
+  }
+}
+
+function renderTrip(data) {
+  const c = data.estimated_cost;
+  const companionLabel = {solo:'Solo Explorer 👤', couple:'Couple Getaway 👩‍❤️‍👨', family:'Family Trip 👨‍👩‍👧‍👦', group:'Group Trip 👥'}[data.companion] || 'Explorer';
+  let html = `
+    <div class="trip-result">
+      <div class="trip-result-header">
+        <h2>🗺️ ${data.trip_name}</h2>
+        <p style="color:var(--text-muted)">${data.days} days · ${companionLabel} · ${data.budget.toUpperCase()} budget</p>
+      </div>
+
+      <div class="budget-card">
+        <h3>💰 Estimated Budget Breakdown</h3>
+        <div class="budget-grid">
+          <div class="budget-item"><div class="amount">₹${c.transport.toLocaleString('en-IN')}</div><div class="label">Transport</div></div>
+          <div class="budget-item"><div class="amount">₹${c.food.toLocaleString('en-IN')}</div><div class="label">Food & Dining</div></div>
+          <div class="budget-item"><div class="amount">₹${c.accommodation.toLocaleString('en-IN')}</div><div class="label">Hotels / Stay</div></div>
+          <div class="budget-item"><div class="amount">₹${c.entry_fees.toLocaleString('en-IN')}</div><div class="label">Entry Fees</div></div>
+        </div>
+        <div class="budget-total"><div class="label">Total Estimated Package (${companionLabel})</div><div class="amount">₹${c.total.toLocaleString('en-IN')}</div></div>
+      </div>`;
+
+  data.itinerary.forEach(day => {
+    html += `
+      <div class="day-card">
+        <div class="day-header">
+          <div class="day-num">${day.day}</div>
+          <div>
+            <div class="day-title">${day.title}</div>
+            ${day.pacing_note ? `<div style="font-size:0.75rem;color:var(--text-muted);font-weight:400;margin-top:2px;">⚡ ${day.pacing_note}</div>` : ''}
+          </div>
+        </div>
+        <div class="day-places">`;
+    day.places.forEach(p => {
+      html += `
+          <div class="timeline-item">
+            <div class="timeline-time">
+              <div>${p.time}</div>
+              ${p.phase ? `<div style="font-size:0.68rem;color:var(--text-muted);margin-top:2px;font-weight:400;">${p.phase}</div>` : ''}
+            </div>
+            <div class="timeline-content">
+              <h4><a href="/place/${p.slug}">${p.name}</a></h4>
+              <p style="font-size:0.82rem;color:var(--text-secondary);margin:2px 0 6px;">${p.description}</p>
+              <div class="timeline-meta">
+                <span>${getCatEmoji(p.category)} ${p.category.replace('_',' ')}</span>
+                <span>📍 ${p.district}</span>
+              </div>
+            </div>
+          </div>`;
+    });
+
+    if (day.recommended_foods && day.recommended_foods.length > 0) {
+      html += `
+        <div style="margin-top:12px;padding:10px 14px;background:rgba(255,122,24,0.08);border-radius:8px;font-size:0.82rem;">
+          <strong style="color:var(--primary);">🍲 Recommended Local Foods:</strong> ${day.recommended_foods.map(f => `<strong>${f.name}</strong>`).join(', ')}
+        </div>`;
+    }
+
+    if (day.recommended_hotels && day.recommended_hotels.length > 0) {
+      html += `
+        <div style="margin-top:6px;padding:10px 14px;background:rgba(99,102,241,0.08);border-radius:8px;font-size:0.82rem;">
+          <strong style="color:#818cf8;">🏨 Recommended Stays:</strong> ${day.recommended_hotels.map(h => `${h.name} (${h.price_range}) ★ ${h.rating || 4.3}`).join(' · ')}
+        </div>`;
+    }
+
+    html += `</div></div>`;
+  });
+
+  html += `
+      <!-- Nearby Essentials Section for Itinerary -->
+      <div class="day-card" style="padding: 16px;">
+        <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; color: var(--text-primary);">
+          🧭 Nearby Essentials Along Your Route
+        </h3>
+        {% include "partials/smart_nearby_discovery.html" %}
+      </div>
+
+      <div class="trip-actions">
+        <button class="btn-save-trip" onclick="saveTrip()">💾 Save to My Trips</button>
+        <button class="btn-print" onclick="window.print()">📄 Export PDF</button>
+        <button class="btn-regenerate" onclick="generateTrip()">🔄 Regenerate</button>
+      </div>
+    </div>`;
+
+  document.getElementById('trip-results').innerHTML = html;
+  if (window.SNS) {
+    SNS.init({ containerId: 'sn-discovery-container', mapId: 'sn-map-canvas' });
+  }
+}
+
+function getCatEmoji(cat) {
+  const map = {temple:'🛕',historical:'🏛️',nature:'🌿',waterfall:'💧',tourist_spot:'📍',fort:'🏰',religious:'🙏',hidden_gem:'💎',park:'🌳',lake:'🏞️'};
+  return map[cat] || '📍';
+}
+
+async function saveTrip() {
+  if (!currentTrip) return;
+  try {
+    const res = await fetch('/api/itinerary/save-generated', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': '{{ session.get("_csrf_token","") }}'
+      },
+      body: JSON.stringify({
+        name: currentTrip.trip_name,
+        itinerary: currentTrip.itinerary
+      })
+    });
+    const result = await res.json();
+    if (result.redirect) {
+      window.location.href = result.redirect;
+    }
+  } catch(e) {
+    alert('Failed to save. Please try again.');
+  }
+}
+</script>
+{% endblock %}

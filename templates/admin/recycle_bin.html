@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+{% block title %}Recycle Bin — {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Recycle Bin Layout */
+.recycle-layout {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--space-xl) var(--space-md);
+}
+.recycle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2xl);
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+.recycle-header-left h1 {
+  font-family: var(--font-heading);
+  font-size: 1.6rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.recycle-header-left p {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  margin-top: 4px;
+}
+.recycle-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 14px;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: rgba(244,63,94,0.1);
+  color: var(--accent-rose);
+}
+
+/* Deleted Item Card */
+.deleted-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  padding: var(--space-lg);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-md);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+.deleted-item::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 4px;
+  background: var(--accent-rose);
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+}
+.deleted-item:hover {
+  border-color: var(--primary-200);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.deleted-item-icon {
+  width: 52px; height: 52px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  background: var(--bg-elevated);
+  flex-shrink: 0;
+}
+.deleted-item-info {
+  flex: 1;
+  min-width: 0;
+}
+.deleted-item-name {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.deleted-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.deleted-item-meta span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.deleted-item-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Action Buttons */
+.btn-restore {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid var(--accent-emerald);
+  background: rgba(16,185,129,0.08);
+  color: var(--accent-emerald);
+  transition: all 0.25s;
+  font-family: var(--font-body);
+}
+.btn-restore:hover {
+  background: var(--accent-emerald);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+}
+.btn-perm-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid var(--accent-rose);
+  background: rgba(244,63,94,0.06);
+  color: var(--accent-rose);
+  transition: all 0.25s;
+  font-family: var(--font-body);
+}
+.btn-perm-delete:hover {
+  background: var(--accent-rose);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(244,63,94,0.3);
+}
+
+/* Empty State */
+.recycle-empty {
+  text-align: center;
+  padding: var(--space-3xl) var(--space-xl);
+  color: var(--text-muted);
+}
+.recycle-empty-icon {
+  font-size: 3.5rem;
+  display: block;
+  margin-bottom: var(--space-md);
+  opacity: 0.6;
+}
+.recycle-empty h3 {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.recycle-empty p {
+  font-size: 0.88rem;
+}
+
+/* Confirm Delete Modal */
+.confirm-modal {
+  display: none;
+  position: fixed; inset: 0;
+  z-index: 1000;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(6px);
+  align-items: center;
+  justify-content: center;
+}
+.confirm-modal.open { display: flex; }
+.confirm-box {
+  background: var(--bg-card-solid, var(--bg-card));
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: var(--space-2xl);
+  width: 90%; max-width: 440px;
+  box-shadow: var(--shadow-xl);
+  text-align: center;
+  animation: modalSlideUp 0.3s ease;
+}
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.confirm-box-icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: var(--space-md);
+}
+.confirm-box h3 {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.confirm-box p {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin-bottom: var(--space-xl);
+  line-height: 1.5;
+}
+.confirm-box p strong {
+  color: var(--accent-rose);
+}
+.confirm-box-actions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: center;
+}
+.confirm-box .btn-cancel {
+  padding: 10px 24px;
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  font-family: var(--font-body);
+}
+.confirm-box .btn-cancel:hover {
+  background: var(--bg-secondary);
+}
+.confirm-box .btn-confirm-delete {
+  padding: 10px 24px;
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: var(--accent-rose);
+  color: white;
+  transition: all 0.2s;
+  font-family: var(--font-body);
+}
+.confirm-box .btn-confirm-delete:hover {
+  background: #e11d48;
+  box-shadow: 0 4px 16px rgba(244,63,94,0.4);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .deleted-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-md);
+  }
+  .deleted-item-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .recycle-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="recycle-layout">
+  <div class="recycle-header">
+    <div class="recycle-header-left">
+      <h1>
+        🗑️ Recycle <span class="text-gradient-saffron">Bin</span>
+      </h1>
+      <p>Deleted places can be restored or permanently removed.</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:var(--space-md);">
+      {% if deleted %}
+      <span class="recycle-count-badge">🗑️ {{ deleted | length }} item{{ 's' if deleted | length != 1 }}</span>
+      {% endif %}
+      <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline">← Dashboard</a>
+    </div>
+  </div>
+
+  {% if deleted %}
+  <div class="deleted-items-list">
+    {% for place in deleted %}
+    <div class="deleted-item" id="deleted-item-{{ place.id }}">
+      <div class="deleted-item-icon">
+        {% if place.category == 'temple' %}🛕{% elif place.category == 'nature' %}🌿{% elif place.category == 'historical' %}🏛️{% elif place.category == 'waterfall' %}💧{% elif place.category == 'hidden_gem' %}💎{% elif place.category == 'mountain' %}⛰️{% elif place.category == 'lake' %}🌊{% elif place.category == 'adventure' %}🧗{% elif place.category == 'cultural' %}🎭{% elif place.category == 'food_place' %}🍽️{% elif place.category == 'market' %}🛍️{% elif place.category == 'beach' %}🏖️{% else %}📍{% endif %}
+      </div>
+      <div class="deleted-item-info">
+        <div class="deleted-item-name">{{ place.name }}</div>
+        <div class="deleted-item-meta">
+          <span>📍 {{ place.district_name or 'Unknown District' }}</span>
+          <span>🏷️ {{ place.category | category_label }}</span>
+          {% if place.deleted_at %}
+          <span>🕐 Deleted: {{ place.deleted_at.strftime('%Y-%m-%d %H:%M') if place.deleted_at else '' }}</span>
+          {% endif %}
+          {% if place.deleted_by %}
+          <span>👤 By: {{ place.deleted_by }}</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="deleted-item-actions">
+        <form method="POST" action="{{ url_for('admin.restore_place_route', place_id=place.id) }}">
+{{ csrf_input() }}
+          <button type="submit" class="btn-restore" title="Restore this place">
+            ♻️ Restore
+          </button>
+        </form>
+        <button type="button" class="btn-perm-delete"
+                onclick="confirmPermanentDelete({{ place.id }}, '{{ place.name | e }}')"
+                title="Delete permanently">
+          💀 Delete Forever
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="recycle-empty">
+    <span class="recycle-empty-icon">♻️</span>
+    <h3>Recycle Bin is empty</h3>
+    <p>No deleted places found. Deleted items will appear here.</p>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-primary" style="margin-top:var(--space-lg);">← Back to Dashboard</a>
+  </div>
+  {% endif %}
+</section>
+
+<!-- Permanent Delete Confirmation Modal -->
+<div class="confirm-modal" id="confirm-delete-modal" onclick="if(event.target===this)closeConfirmModal()">
+  <div class="confirm-box">
+    <span class="confirm-box-icon">⚠️</span>
+    <h3>Permanently Delete?</h3>
+    <p>
+      You are about to permanently delete <strong id="confirm-place-name"></strong>.<br>
+      This action <strong>cannot be undone</strong>. All photos, reviews, and related data will be removed forever.
+    </p>
+    <div class="confirm-box-actions">
+      <button type="button" class="btn-cancel" onclick="closeConfirmModal()">Cancel</button>
+      <form method="POST" id="confirm-delete-form" style="display:inline;">
+{{ csrf_input() }}
+        <button type="submit" class="btn-confirm-delete">🗑️ Yes, Delete Forever</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmPermanentDelete(placeId, placeName) {
+  document.getElementById('confirm-place-name').textContent = placeName;
+  document.getElementById('confirm-delete-form').action = '/admin/permanent-delete/' + placeId;
+  document.getElementById('confirm-delete-modal').classList.add('open');
+}
+function closeConfirmModal() {
+  document.getElementById('confirm-delete-modal').classList.remove('open');
+}
+// Close on Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeConfirmModal();
+});
+</script>
+{% endblock %}

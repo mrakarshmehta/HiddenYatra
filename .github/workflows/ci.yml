@@ -1,0 +1,57 @@
+name: HiddenYatra CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: hiddenyatra_db
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Code Syntax Check
+        run: |
+          python -m py_compile app.py config.py models/*.py routes/*.py utils/*.py
+
+      - name: Minify Static Assets Check
+        run: |
+          python scripts/tools/minify_assets.py
+
+      - name: Run Test Suite
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_NAME: hiddenyatra_db
+          DB_USER: root
+          DB_PASSWORD: root
+          SECRET_KEY: test-ci-secret-key-for-github-actions
+          FLASK_ENV: testing
+        run: |
+          python -m unittest discover tests -v

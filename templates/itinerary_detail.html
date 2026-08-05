@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}{{ trip.name }} — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="breadcrumb">
+    <a href="{{ url_for('itinerary.itinerary_page') }}">My Trips</a> <span>›</span>
+    <span>{{ trip.name }}</span>
+  </div>
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div>
+      <h1 class="page-title">{{ trip.name }}</h1>
+      <p class="page-subtitle">Created {{ trip.created_at.strftime('%Y-%m-%d') if trip.created_at else '' }}</p>
+    </div>
+    <button onclick="window.print()" class="btn btn-outline" style="display:inline-flex;align-items:center;gap:8px;">
+      📄 Export PDF
+    </button>
+  </div>
+</div>
+
+<section class="section" style="display:grid;grid-template-columns:1fr 340px;gap:var(--space-xl);">
+  <!-- Main: Day-wise items -->
+  <div>
+    {% if days %}
+    <!-- Interactive Itinerary Route Map -->
+    <div class="content-card" style="margin-bottom:var(--space-lg);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-sm);">
+        <h3 class="content-card-title" style="margin:0;">🗺️ Interactive Trip Route Map</h3>
+        <span style="font-size:0.78rem;color:var(--text-muted);">Sequential route connecting your stops</span>
+      </div>
+      <div id="itinerary-map" style="height:320px;border-radius:var(--radius-lg);border:1px solid var(--border-color);overflow:hidden;position:relative;z-index:1;"
+           data-days='{{ days | tojson }}'></div>
+    </div>
+
+    {% for day_num, day_items in days|dictsort %}
+    <div class="content-card">
+      <div class="content-card-title">📅 Day {{ day_num }}</div>
+      <div class="specialties-list">
+        {% for item in day_items %}
+        <div class="specialty-card" style="border-left-color: var(--teal-500);">
+          <div class="specialty-header">
+            <a href="{{ url_for('places.place_detail', slug=item.place_slug) }}" style="text-decoration:none;">
+              <span class="specialty-name">{{ item.place_name }}</span>
+            </a>
+            <form action="{{ url_for('itinerary.remove_place_from_trip', itinerary_id=trip.id, item_id=item.id) }}" method="POST" style="display:inline;">
+{{ csrf_input() }}
+              <button type="submit" class="btn btn-outline btn-sm" title="Remove">✕</button>
+            </form>
+          </div>
+          <p class="specialty-desc">📍 {{ item.state_name }} • {{ item.category }}</p>
+          {% if item.notes %}
+          <p class="specialty-meta">📝 {{ item.notes }}</p>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="empty-state">
+      <span class="empty-icon">📍</span>
+      <h3>No places added yet</h3>
+      <p>Search and add places from the sidebar!</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Sidebar: Add Place -->
+  <div>
+    <div class="content-card" style="position:sticky;top:calc(var(--navbar-height) + 20px);">
+      <div class="content-card-title">➕ Add a Place</div>
+      <form action="{{ url_for('itinerary.add_place_to_trip', itinerary_id=trip.id) }}" method="POST">
+{{ csrf_input() }}
+        <div class="form-group">
+          <label>Search Place</label>
+          <input type="text" id="trip-search-input" placeholder="Type to search..." class="form-input" autocomplete="off">
+          <input type="hidden" name="place_id" id="trip-place-id">
+          <div id="trip-search-results" style="margin-top:var(--space-sm);"></div>
+        </div>
+        <div class="form-group">
+          <label>Day Number</label>
+          <input type="number" name="day_number" value="1" min="1" max="30" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>Notes (optional)</label>
+          <input type="text" name="notes" placeholder="e.g. Morning visit" class="form-input">
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Add to Trip</button>
+      </form>
+    </div>
+
+    <!-- Delete Trip -->
+    <form action="{{ url_for('itinerary.delete_trip', itinerary_id=trip.id) }}" method="POST" style="margin-top:var(--space-md);">
+{{ csrf_input() }}
+      <button type="submit" class="btn btn-outline btn-full" onclick="return confirm('Delete this trip?')">🗑️ Delete Trip</button>
+    </form>
+  </div>
+</section>
+
+<script>
+// Place search for itinerary
+const searchInput = document.getElementById('trip-search-input');
+const placeIdInput = document.getElementById('trip-place-id');
+const resultsDiv = document.getElementById('trip-search-results');
+let debounceTimer;
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(debounceTimer);
+  const q = searchInput.value.trim();
+  if (q.length < 2) { resultsDiv.innerHTML = ''; return; }
+
+  debounceTimer = setTimeout(() => {
+    fetch('/api/itinerary/search?q=' + encodeURIComponent(q))
+      .then(r => r.json())
+      .then(data => {
+        resultsDiv.innerHTML = data.map(p =>
+          `<div class="autocomplete-item" style="padding:8px 12px;cursor:pointer;border-radius:6px;"
+                onclick="selectPlace(${p.id}, '${p.name.replace(/'/g, "\\'")}')">
+            <span class="autocomplete-item-name">${p.name}</span>
+            <span class="autocomplete-item-meta" style="display:block;font-size:0.75rem;color:var(--text-muted);">${p.state_name}</span>
+          </div>`
+        ).join('') || '<p style="color:var(--text-muted);font-size:0.85rem;padding:8px;">No results</p>';
+      });
+  }, 300);
+});
+
+function selectPlace(id, name) {
+  placeIdInput.value = id;
+  searchInput.value = name;
+  resultsDiv.innerHTML = `<span style="color:var(--success-400);font-size:0.8rem;">✓ ${name} selected</span>`;
+}
+</script>
+
+<style>
+@media (max-width: 900px) {
+  .section[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+{% endblock %}

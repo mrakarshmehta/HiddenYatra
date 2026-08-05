@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}User Photos — Admin — {{ app_name }}{% endblock %}
+{% block extra_css %}
+<style>
+.admin-header{max-width:1100px;margin:0 auto;padding:var(--space-xl) var(--space-lg);}
+.photos-container{max-width:1100px;margin:0 auto;padding:0 var(--space-lg) var(--space-xl);}
+.filter-tabs{display:flex;gap:var(--space-sm);margin-bottom:var(--space-xl);}
+.filter-tab{padding:8px 20px;border-radius:var(--radius-full);border:1px solid var(--border-color);background:var(--bg-card);color:var(--text-secondary);text-decoration:none;font-size:0.85rem;font-weight:600;transition:all 0.2s;}
+.filter-tab:hover{border-color:var(--primary);color:var(--primary);}
+.filter-tab.active{background:var(--primary);color:white;border-color:var(--primary);}
+.photo-mod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:var(--space-lg);}
+.photo-mod-card{background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);overflow:hidden;transition:all 0.3s;}
+.photo-mod-card:hover{box-shadow:var(--shadow-md);}
+.photo-mod-img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;}
+.photo-mod-body{padding:var(--space-md);}
+.photo-mod-place{font-size:0.82rem;font-weight:600;color:var(--primary);margin-bottom:4px;}
+.photo-mod-meta{font-size:0.75rem;color:var(--text-muted);margin-bottom:var(--space-sm);}
+.photo-mod-actions{display:flex;gap:var(--space-sm);flex-wrap:wrap;}
+.photo-mod-status{display:inline-flex;align-items:center;padding:3px 10px;border-radius:var(--radius-full);font-size:0.7rem;font-weight:600;}
+.status-pending{background:rgba(250,204,21,0.12);color:var(--accent-amber);}
+.status-approved{background:rgba(16,185,129,0.12);color:var(--accent-emerald);}
+.status-rejected{background:rgba(244,63,94,0.12);color:var(--rose);}
+.empty-state{text-align:center;padding:var(--space-3xl);color:var(--text-muted);}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="admin-header">
+  <nav class="breadcrumb">
+    <a href="{{ url_for('admin.dashboard') }}">Dashboard</a> / <span>User Photos</span>
+  </nav>
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-md);">
+    <h1 class="page-title">📸 User Photo <span class="text-gradient-saffron">Moderation</span></h1>
+    {% if pending_count > 0 %}
+    <span style="background:var(--primary);color:white;padding:6px 16px;border-radius:var(--radius-full);font-size:0.85rem;font-weight:600;">{{ pending_count }} Pending</span>
+    {% endif %}
+  </div>
+</section>
+
+<div class="photos-container">
+  <!-- Filter Tabs -->
+  <div class="filter-tabs">
+    <a href="{{ url_for('admin.user_photos_admin', status='pending') }}" class="filter-tab {% if filter_status == 'pending' %}active{% endif %}">⏳ Pending</a>
+    <a href="{{ url_for('admin.user_photos_admin', status='approved') }}" class="filter-tab {% if filter_status == 'approved' %}active{% endif %}">✅ Approved</a>
+    <a href="{{ url_for('admin.user_photos_admin', status='rejected') }}" class="filter-tab {% if filter_status == 'rejected' %}active{% endif %}">❌ Rejected</a>
+    <a href="{{ url_for('admin.user_photos_admin', status='all') }}" class="filter-tab {% if filter_status == 'all' %}active{% endif %}">📋 All</a>
+  </div>
+
+  {% if photos %}
+  <div class="photo-mod-grid">
+    {% for photo in photos %}
+    <div class="photo-mod-card">
+      <img class="photo-mod-img" src="{{ url_for('static', filename='uploads/places/' + photo.filename) }}" alt="{{ photo.caption or 'User photo' }}">
+      <div class="photo-mod-body">
+        <div class="photo-mod-place">
+          <a href="{{ url_for('places.place_detail', slug=photo.place_slug) }}" style="color:inherit;">{{ photo.place_name }}</a>
+        </div>
+        <div class="photo-mod-meta">
+          📷 {{ photo.uploader_name }} • {{ photo.created_at.strftime('%Y-%m-%d %H:%M') if photo.created_at else '' }}
+          {% if photo.caption %}<br>💬 {{ photo.caption }}{% endif %}
+        </div>
+        <span class="photo-mod-status status-{{ photo.status }}">
+          {% if photo.status == 'pending' %}⏳ Pending{% elif photo.status == 'approved' %}✅ Approved{% else %}❌ Rejected{% endif %}
+        </span>
+        <div class="photo-mod-actions" style="margin-top:var(--space-sm);">
+          {% if photo.status != 'approved' %}
+          <form method="POST" action="{{ url_for('admin.approve_user_photo_view', photo_id=photo.id) }}" style="display:inline;">
+{{ csrf_input() }}
+            <button type="submit" class="btn btn-sm" style="background:rgba(16,185,129,0.12);color:var(--accent-emerald);border:1px solid rgba(16,185,129,0.3);">✅ Approve</button>
+          </form>
+          {% endif %}
+          {% if photo.status != 'rejected' %}
+          <form method="POST" action="{{ url_for('admin.reject_user_photo_view', photo_id=photo.id) }}" style="display:inline;">
+{{ csrf_input() }}
+            <button type="submit" class="btn btn-sm" style="background:rgba(250,204,21,0.1);color:var(--accent-amber);border:1px solid rgba(250,204,21,0.3);">❌ Reject</button>
+          </form>
+          {% endif %}
+          <form method="POST" action="{{ url_for('admin.delete_user_photo_view', photo_id=photo.id) }}" style="display:inline;">
+{{ csrf_input() }}
+            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this photo permanently?')">🗑️ Delete</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <span style="font-size:3rem;display:block;margin-bottom:var(--space-md);">📷</span>
+    <p style="font-size:1.1rem;font-weight:600;">No {{ filter_status }} photos</p>
+    <p style="font-size:0.85rem;">{% if filter_status == 'pending' %}No photos waiting for review.{% else %}No photos in this category.{% endif %}</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

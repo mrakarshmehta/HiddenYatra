@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}Add New Place — {{ app_name }}{% endblock %}
+{% block extra_css %}
+<style>
+.admin-header,.form-section{max-width:900px;margin:0 auto;padding:var(--space-xl) var(--space-lg);}
+.form-section{background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:var(--space-xl);margin-bottom:var(--space-lg);}
+.form-section-title{font-family:var(--font-heading);font-size:1.15rem;font-weight:600;margin-bottom:var(--space-md);}
+.form-hint{font-size:0.85rem;color:var(--text-muted);margin-bottom:var(--space-md);}
+.form-label{font-size:0.85rem;font-weight:500;color:var(--text-secondary);margin-bottom:4px;}
+.form-select{padding:10px 14px;background:var(--bg-elevated);border:1px solid var(--border-color);border-radius:var(--radius-md);color:var(--text-primary);font-size:0.9rem;font-family:var(--font-body);}
+.form-file{padding:10px;background:var(--bg-elevated);border:1px solid var(--border-color);border-radius:var(--radius-md);color:var(--text-primary);width:100%;}
+.form-actions{max-width:900px;margin:0 auto;display:flex;gap:var(--space-md);padding:var(--space-lg);}
+.admin-map{height:260px;border-radius:var(--radius-md);background:var(--bg-elevated);margin-bottom:var(--space-md);position:relative;overflow:hidden;z-index:1;}
+.specialty-form-row{display:grid;grid-template-columns:1fr 1fr 120px 1fr auto;gap:var(--space-sm);margin-bottom:var(--space-sm);align-items:start;}
+.photo-preview{display:flex;gap:var(--space-sm);flex-wrap:wrap;margin-top:var(--space-sm);}
+.btn-danger{background:rgba(244,63,94,0.15);color:var(--rose);border:1px solid rgba(244,63,94,0.3);}
+@media(max-width:768px){.specialty-form-row{grid-template-columns:1fr;}}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="admin-header">
+  <nav class="breadcrumb">
+    <a href="{{ url_for('admin.dashboard') }}">Dashboard</a> / <span>Add New Place</span>
+  </nav>
+  <h1 class="page-title">Add New <span class="text-gradient-saffron">Place</span></h1>
+</section>
+
+<form method="POST" enctype="multipart/form-data" class="admin-form" id="add-place-form">
+{{ csrf_input() }}
+
+  <!-- SECTION 1: Location -->
+  <div class="form-section">
+    <h2 class="form-section-title">📍 Location</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">State *</label>
+        <input type="text" name="state_name" class="form-input" placeholder="e.g. Rajasthan" required list="states-list">
+        <datalist id="states-list">
+          {% for state in states %}
+          <option value="{{ state.name }}">
+          {% endfor %}
+        </datalist>
+      </div>
+      <div class="form-group">
+        <label class="form-label">District</label>
+        <input type="text" name="district_name" class="form-input" placeholder="e.g. Jaipur">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Block / Tehsil</label>
+        <input type="text" name="block_name" class="form-input" placeholder="e.g. Amber">
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: Place Details -->
+  <div class="form-section">
+    <h2 class="form-section-title">📝 Place Details</h2>
+    <div class="form-group">
+      <label class="form-label">Place Name *</label>
+      <input type="text" name="name" class="form-input" placeholder="e.g. Hawa Mahal" required>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description (why it's special)</label>
+      <textarea name="description" class="form-textarea" rows="5" placeholder="Tell travelers what makes this place special..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select name="category" class="form-select">
+          {% for code, label in categories %}
+          <option value="{{ code }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">
+          <input type="checkbox" name="is_featured"> Mark as Featured
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: Coordinates -->
+  <div class="form-section">
+    <h2 class="form-section-title">🗺️ Location Coordinates</h2>
+    <p class="form-hint">Click on the map or enter coordinates manually. You can also paste a Google Maps link.</p>
+    <div id="admin-map" class="admin-map"></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Latitude</label>
+        <input type="number" name="latitude" id="lat-input" class="form-input" step="any" placeholder="e.g. 26.9239">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Longitude</label>
+        <input type="number" name="longitude" id="lng-input" class="form-input" step="any" placeholder="e.g. 75.8267">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Google Maps Link</label>
+        <input type="url" name="maps_link" class="form-input" placeholder="https://maps.google.com/...">
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 4: Photos -->
+  <div class="form-section">
+    <h2 class="form-section-title">📸 Photos</h2>
+    <div class="form-group">
+      <label class="form-label">Upload Photos (multiple allowed)</label>
+      <input type="file" name="photos" class="form-file" multiple accept="image/*" id="photo-input">
+      <div class="photo-preview" id="photo-preview"></div>
+    </div>
+  </div>
+
+  <!-- SECTION 5: Specialties -->
+  <div class="form-section">
+    <h2 class="form-section-title">🍛 Famous Specialties / Local Food</h2>
+    <div id="specialties-container">
+      <div class="specialty-form-row">
+        <input type="text" name="spec_name[]" class="form-input" placeholder="Specialty name (e.g. Dal Baati Churma)">
+        <input type="text" name="spec_description[]" class="form-input" placeholder="Description">
+        <select name="spec_category[]" class="form-select form-select-sm">
+          {% for code, label in specialty_categories %}
+          <option value="{{ code }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+        <input type="text" name="spec_where[]" class="form-input" placeholder="Where to find (shop/area)">
+      </div>
+    </div>
+    <button type="button" class="btn btn-outline btn-sm" id="add-specialty-btn">+ Add Another Specialty</button>
+  </div>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary btn-lg">✅ Save Place</button>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline">Cancel</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}

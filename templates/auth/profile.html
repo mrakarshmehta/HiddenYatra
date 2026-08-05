@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}My Profile — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <h1 class="page-title">
+    <span class="profile-emoji">{{ session.get('user_emoji', '🧳') }}</span>
+    {% if user %}{{ user.display_name }}{% else %}Traveler{% endif %}
+  </h1>
+  <p class="page-subtitle">Your travel dashboard</p>
+  {% if session.get('user_id') %}
+  <form method="POST" action="{{ url_for('auth.logout') }}" style="display:inline;">
+    {{ csrf_input() }}
+    <button type="submit" class="btn btn-outline btn-sm">Logout</button>
+  </form>
+  {% endif %}
+</section>
+
+<!-- Profile Stats -->
+<section class="section">
+  <div class="profile-stats">
+    <div class="profile-stat">
+      <span class="profile-stat-value">{{ favorites | length }}</span>
+      <span class="profile-stat-label">Saved Places</span>
+    </div>
+    <div class="profile-stat">
+      <span class="profile-stat-value">{{ visited | length }}</span>
+      <span class="profile-stat-label">Visited</span>
+    </div>
+    <div class="profile-stat">
+      <span class="profile-stat-value">{{ submissions | length }}</span>
+      <span class="profile-stat-label">Submissions</span>
+    </div>
+  </div>
+</section>
+
+<!-- Saved Places -->
+<section class="section">
+  <div class="section-header">
+    <h2 class="section-title">❤️ Saved <span class="text-gradient-saffron">Places</span></h2>
+  </div>
+  {% if favorites %}
+  <div class="places-grid stagger-children">
+    {% for place in favorites %}
+    {% include "partials/place_card.html" %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <span class="empty-icon">💝</span>
+    <h3>No saved places yet</h3>
+    <p><a href="{{ url_for('main.index') }}">Explore Bihar</a> and save your favorites!</p>
+  </div>
+  {% endif %}
+</section>
+
+<!-- Visited Places -->
+<section class="section">
+  <div class="section-header">
+    <h2 class="section-title">✅ Places <span class="text-gradient-teal">Visited</span></h2>
+  </div>
+  {% if visited %}
+  <div class="places-grid stagger-children">
+    {% for place in visited %}
+    {% include "partials/place_card.html" %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <span class="empty-icon">🗺️</span>
+    <h3>No visited places tracked yet</h3>
+    <p>Visit a place page and mark it as visited!</p>
+  </div>
+  {% endif %}
+</section>
+
+<!-- My Submissions -->
+{% if submissions %}
+<section class="section">
+  <div class="section-header">
+    <h2 class="section-title">📝 My <span class="text-gradient-saffron">Submissions</span></h2>
+  </div>
+  <div class="submissions-list">
+    {% for sub in submissions %}
+    <div class="submission-card">
+      <div class="submission-header">
+        <h3>{{ sub.place_name }}</h3>
+        <span class="submission-status status-{{ sub.status }}">{{ sub.status | title }}</span>
+      </div>
+      {% if sub.district_name %}<p class="submission-meta">📍 {{ sub.district_name }}</p>{% endif %}
+      {% if sub.description %}<p class="submission-desc">{{ sub.description | truncate_words(20) }}</p>{% endif %}
+      <p class="submission-date">Submitted: {{ sub.created_at.strftime('%Y-%m-%d') if sub.created_at else '' }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

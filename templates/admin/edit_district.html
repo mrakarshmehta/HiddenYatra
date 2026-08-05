@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ district.name }} — Admin — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div style="max-width:800px;margin:0 auto;padding:var(--space-xl) var(--space-lg);">
+
+  <nav style="font-size:0.82rem;color:var(--text-muted);margin-bottom:var(--space-md);">
+    <a href="{{ url_for('admin.dashboard') }}" style="color:var(--text-secondary);text-decoration:none;">Dashboard</a> /
+    <a href="{{ url_for('admin.districts_manager') }}" style="color:var(--text-secondary);text-decoration:none;">Districts</a> /
+    <span>Edit {{ district.name }}</span>
+  </nav>
+
+  <h1 style="font-family:var(--font-heading);font-size:1.6rem;margin-bottom:var(--space-xl);">Edit <span class="text-gradient-saffron">{{ district.name }}</span></h1>
+
+  <form method="POST">
+{{ csrf_input() }}
+    <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-xl);padding:var(--space-xl);margin-bottom:var(--space-lg);">
+      <h2 style="font-family:var(--font-heading);font-size:1.05rem;margin-bottom:var(--space-lg);">📝 Basic Info</h2>
+
+      <div style="margin-bottom:var(--space-lg);">
+        <label style="font-size:0.82rem;font-weight:600;display:block;margin-bottom:4px;">District Name *</label>
+        <input type="text" name="name" value="{{ district.name }}" class="form-input" required>
+      </div>
+
+      <div style="margin-bottom:var(--space-lg);">
+        <label style="font-size:0.82rem;font-weight:600;display:block;margin-bottom:4px;">Description</label>
+        <textarea name="description" class="form-input" rows="3" placeholder="Brief description of the district">{{ district.description or '' }}</textarea>
+      </div>
+
+      <div style="margin-bottom:var(--space-lg);">
+        <label style="font-size:0.82rem;font-weight:600;display:block;margin-bottom:4px;">Famous For</label>
+        <input type="text" name="famous_for" value="{{ district.famous_for or '' }}" class="form-input" placeholder="e.g., Mahabodhi Temple, Silk Weaving">
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--space-lg);">
+        <div>
+          <label style="font-size:0.82rem;font-weight:600;display:block;margin-bottom:4px;">Sort Order</label>
+          <input type="number" name="sort_order" value="{{ district.sort_order or 0 }}" class="form-input" min="0">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding-top:20px;">
+          <input type="checkbox" name="is_featured" id="is_featured" value="1" {% if district.is_featured %}checked{% endif %}>
+          <label for="is_featured" style="font-size:0.85rem;">⭐ Featured</label>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding-top:20px;">
+          <input type="checkbox" name="is_visible" id="is_visible" value="1" {% if district.is_visible %}checked{% endif %}>
+          <label for="is_visible" style="font-size:0.85rem;">👁️ Visible</label>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:var(--space-md);align-items:center;">
+      <button type="submit" class="btn btn-primary btn-lg">💾 Save Changes</button>
+      <a href="{{ url_for('admin.districts_manager') }}" class="btn btn-outline">Cancel</a>
+    </div>
+  </form>
+
+  <!-- Cover Image Section (separate form) -->
+  <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-xl);padding:var(--space-xl);margin-top:var(--space-xl);">
+    <h2 style="font-family:var(--font-heading);font-size:1.05rem;margin-bottom:var(--space-lg);">📷 Cover Image</h2>
+
+    {% if district.cover_image %}
+    <div style="display:flex;gap:var(--space-lg);align-items:flex-start;margin-bottom:var(--space-lg);">
+      <div style="width:200px;border-radius:var(--radius-lg);overflow:hidden;border:2px solid var(--primary);">
+        <img src="{{ url_for('static', filename='uploads/districts/' + district.cover_image) }}" alt="Cover" style="width:100%;aspect-ratio:16/10;object-fit:cover;display:block;">
+      </div>
+      <div>
+        <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:var(--space-sm);">
+          <strong>File:</strong> {{ district.cover_image }}<br>
+          <strong>Status:</strong> <span style="color:var(--accent-emerald);">✅ Active</span>
+        </p>
+        <form method="POST" action="{{ url_for('admin.delete_district_cover', district_id=district.id) }}">
+{{ csrf_input() }}
+          <button type="submit" class="btn btn-sm btn-outline" style="color:var(--accent-rose);border-color:var(--accent-rose);" onclick="return confirm('Remove cover image?')">🗑️ Remove Cover</button>
+        </form>
+      </div>
+    </div>
+    {% else %}
+    <div style="padding:var(--space-lg);text-align:center;background:var(--bg-elevated);border:2px dashed var(--border-color);border-radius:var(--radius-lg);margin-bottom:var(--space-lg);color:var(--text-muted);">
+      <span style="font-size:2rem;display:block;margin-bottom:8px;">🏔️</span>
+      <p style="font-size:0.85rem;">No cover image set</p>
+    </div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('admin.upload_district_cover', district_id=district.id) }}" enctype="multipart/form-data">
+{{ csrf_input() }}
+      <div style="display:flex;gap:var(--space-md);align-items:center;">
+        <input type="file" name="cover_image" accept="image/jpeg,image/png,image/webp" class="form-input" style="flex:1;" required>
+        <button type="submit" class="btn btn-primary btn-sm">📷 Upload Cover</button>
+      </div>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">JPG, PNG, WebP • Auto-resized to 800px</p>
+    </form>
+  </div>
+</div>
+{% endblock %}

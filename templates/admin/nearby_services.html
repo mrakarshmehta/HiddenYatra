@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Nearby Services — {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.services-layout { max-width: 960px; margin: 0 auto; padding: var(--space-xl) var(--space-md); }
+.services-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-xl); flex-wrap: wrap; gap: var(--space-md); }
+.services-header h1 { font-family: var(--font-heading); font-size: 1.5rem; }
+.service-item {
+  display: flex; align-items: center; gap: var(--space-md);
+  padding: var(--space-md); background: var(--bg-card);
+  border: 1px solid var(--border-color); border-radius: var(--radius-lg);
+  margin-bottom: var(--space-sm);
+}
+.service-icon { font-size: 1.3rem; width: 40px; text-align: center; }
+.service-info { flex: 1; min-width: 0; }
+.service-name { font-weight: 600; font-size: 0.9rem; }
+.service-meta { font-size: 0.75rem; color: var(--text-muted); }
+.add-form { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-xl); padding: var(--space-xl); margin-bottom: var(--space-xl); }
+.add-form h3 { font-family: var(--font-heading); font-size: 1.1rem; margin-bottom: var(--space-lg); }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="services-layout">
+  <div class="services-header">
+    <div>
+      <h1>🏥 Nearby <span class="text-gradient-saffron">Services</span></h1>
+      <p style="color:var(--text-muted);font-size:0.85rem;">Manage hospitals, petrol pumps, ATMs, etc. for each district</p>
+    </div>
+    <div style="display:flex;gap:var(--space-sm);align-items:center;">
+      <form method="GET" style="display:flex;gap:var(--space-sm);">
+        <select name="district_id" class="form-input" onchange="this.form.submit()" style="min-width:180px;">
+          <option value="">All Districts</option>
+          {% for d in districts %}
+          <option value="{{ d.id }}" {% if selected_district == d.id %}selected{% endif %}>{{ d.name }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline">← Dashboard</a>
+    </div>
+  </div>
+
+  <!-- Add Service Form -->
+  <div class="add-form">
+    <h3>+ Add New Service</h3>
+    <form method="POST" action="{{ url_for('admin.add_nearby_service_view') }}">
+{{ csrf_input() }}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-md);margin-bottom:var(--space-md);">
+        <div class="form-group">
+          <label>District *</label>
+          <select name="district_id" class="form-input" required>
+            <option value="">Select</option>
+            {% for d in districts %}
+            <option value="{{ d.id }}" {% if selected_district == d.id %}selected{% endif %}>{{ d.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Service Type *</label>
+          <select name="service_type" class="form-input" required>
+            {% for code, label in service_types %}
+            <option value="{{ code }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Name *</label>
+          <input type="text" name="name" class="form-input" placeholder="e.g., District Hospital" required>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--space-md);margin-bottom:var(--space-md);">
+        <div class="form-group">
+          <label>Address</label>
+          <input type="text" name="address" class="form-input" placeholder="Main Road, Patna">
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="text" name="phone" class="form-input" placeholder="9876543210">
+        </div>
+        <div class="form-group">
+          <label>Latitude</label>
+          <input type="number" step="any" name="latitude" class="form-input" placeholder="25.6">
+        </div>
+        <div class="form-group">
+          <label>Longitude</label>
+          <input type="number" step="any" name="longitude" class="form-input" placeholder="85.1">
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">+ Add Service</button>
+    </form>
+  </div>
+
+  <!-- Services List -->
+  {% if services %}
+  <div style="margin-bottom:var(--space-sm);color:var(--text-muted);font-size:0.85rem;">{{ services|length }} services</div>
+  {% set type_icons = {'hospital': '🏥', 'pharmacy': '💊', 'petrol_pump': '⛽', 'atm': '🏧', 'mechanic': '🔧', 'police': '👮', 'railway': '🚂', 'bus_stand': '🚌', 'restaurant': '🍽️', 'dhaba': '🍛'} %}
+  {% for svc in services %}
+  <div class="service-item">
+    <div class="service-icon">{{ type_icons.get(svc.service_type, '📍') }}</div>
+    <div class="service-info">
+      <div class="service-name">{{ svc.name }}</div>
+      <div class="service-meta">
+        {{ svc.service_type | replace('_', ' ') | title }}
+        {% if svc.district_name %} · {{ svc.district_name }}{% endif %}
+        {% if svc.address %} · {{ svc.address }}{% endif %}
+        {% if svc.phone %} · 📞 {{ svc.phone }}{% endif %}
+      </div>
+    </div>
+    {% if svc.latitude and svc.longitude %}
+    <a href="https://www.google.com/maps?q={{ svc.latitude }},{{ svc.longitude }}" target="_blank" style="font-size:0.75rem;color:var(--secondary);">🗺️</a>
+    {% endif %}
+    <form method="POST" action="{{ url_for('admin.delete_nearby_service_view', svc_id=svc.id) }}" style="display:inline;">
+{{ csrf_input() }}
+      <button type="submit" class="dynamic-remove" title="Delete" onclick="return confirm('Delete this service?')">✕</button>
+    </form>
+  </div>
+  {% endfor %}
+  {% else %}
+  <div style="text-align:center;padding:var(--space-3xl);color:var(--text-muted);">
+    <span style="font-size:3rem;display:block;margin-bottom:var(--space-md);">🏥</span>
+    <h3>No services added yet</h3>
+    <p>Add hospitals, petrol pumps, ATMs and more for each district.</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wanderlust — Discover Landmarks, Food & Attractions Worldwide</title>
+  <meta name="description" content="Your ultimate city guide. Search any destination to explore famous landmarks, authentic local delicacies, and must-visit tourist attractions around the world.">
+  <meta name="theme-color" content="#050816">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Constellation Particle Canvas -->
+  <canvas id="particle-canvas"></canvas>
+
+  <div class="app-container">
+
+    <!-- ═══ HEADER ═══ -->
+    <header>
+      <a class="logo" id="header-logo">
+        <span class="logo-icon">🧭</span>
+        <span class="logo-text">Wanderlust</span>
+        <span class="logo-dot"></span>
+      </a>
+    </header>
+
+    <main>
+
+      <!-- ═══ HOME VIEW ═══ -->
+      <section id="home-view" class="view-section active">
+
+        <!-- Hero -->
+        <div class="hero">
+          <div class="hero-badge">
+            <span class="hero-badge-dot"></span>
+            Explore 16 Iconic Destinations
+          </div>
+
+          <h1>
+            Discover the <span class="gradient-text">Soul</span> of<br>
+            Your Next <span class="gradient-warm">Adventure</span>
+          </h1>
+
+          <p class="hero-subtitle">
+            Unveil local delicacies, famous landmarks, and top attractions of the world's most incredible cities — all in one search.
+          </p>
+
+          <!-- Search Bar -->
+          <div class="search-container">
+            <div class="search-wrapper">
+              <input
+                type="text"
+                class="search-input"
+                id="search-input"
+                placeholder="Search a city or country..."
+                autocomplete="off"
+                aria-label="Search for a city or country"
+              >
+              <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <span class="search-shortcut">Ctrl+K</span>
+            </div>
+            <div class="autocomplete-dropdown" id="autocomplete-dropdown"></div>
+          </div>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar" id="stats-bar">
+          <div class="stat-item">
+            <div class="stat-number" data-target="16">0</div>
+            <div class="stat-label">Cities</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number" data-target="64">0</div>
+            <div class="stat-label">Landmarks</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number" data-target="64">0</div>
+            <div class="stat-label">Delicacies</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number" data-target="48">0</div>
+            <div class="stat-label">Attractions</div>
+          </div>
+        </div>
+
+        <!-- Section Header -->
+        <div class="section-header">
+          <h2 class="section-title">Popular <span class="title-accent">Destinations</span></h2>
+          <button class="random-btn" id="random-btn">
+            <span class="dice-icon">🎲</span> Surprise Me
+          </button>
+        </div>
+
+        <!-- Cities Grid -->
+        <div class="cities-grid" id="featured-cities-grid">
+          <!-- Dynamically rendered -->
+        </div>
+
+      </section>
+
+      <!-- ═══ CITY DETAIL VIEW ═══ -->
+      <section id="detail-view" class="view-section">
+
+        <button class="back-btn" id="back-to-home-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          Back to Destinations
+        </button>
+
+        <!-- City Hero Banner -->
+        <div class="city-hero" id="city-hero-container"></div>
+
+        <!-- Details Layout -->
+        <div class="details-layout">
+
+          <!-- Main Content Tabs -->
+          <div class="main-details-content">
+            <div class="tabs-container" id="tabs-container">
+              <div class="tab-indicator" id="tab-indicator"></div>
+              <button class="tab-btn active" data-tab="landmarks">🏛️ Landmarks</button>
+              <button class="tab-btn" data-tab="delicacies">🍜 Delicacies</button>
+              <button class="tab-btn" data-tab="attractions">📸 Attractions</button>
+            </div>
+
+            <div id="landmarks" class="tab-panel active">
+              <div class="items-grid" id="landmarks-grid"></div>
+            </div>
+            <div id="delicacies" class="tab-panel">
+              <div class="items-grid" id="delicacies-grid"></div>
+            </div>
+            <div id="attractions" class="tab-panel">
+              <div class="items-grid" id="attractions-grid"></div>
+            </div>
+          </div>
+
+          <!-- Sidebar -->
+          <div class="sidebar">
+            <div class="widget">
+              <h3 class="widget-title">📋 Quick Facts</h3>
+              <div class="quick-facts-list" id="quick-facts-container"></div>
+            </div>
+            <div class="widget">
+              <h3 class="widget-title">✨ Highlights</h3>
+              <div class="highlights-list" id="highlights-container"></div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ═══ FOOTER ═══ -->
+    <footer>
+      <div class="footer-content">
+        <div class="footer-brand">
+          <span class="footer-brand-icon">🧭</span>
+          Wanderlust
+        </div>
+        <div class="footer-links">
+          <a href="#">About</a>
+          <a href="#">Contact</a>
+          <a href="#">Privacy</a>
+        </div>
+        <p class="footer-copy">&copy; 2026 Wanderlust. Crafted for explorers worldwide.</p>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Scroll To Top -->
+  <button class="scroll-to-top" id="scroll-to-top" aria-label="Scroll to top">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="19" x2="12" y2="5"></line>
+      <polyline points="5 12 12 5 19 12"></polyline>
+    </svg>
+  </button>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

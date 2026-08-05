@@ -1,0 +1,660 @@
+{% extends "base.html" %}
+{% block title %}Interactive Explore Map — {{ app_name }}{% endblock %}
+{% block meta_desc %}Explore Bihar's hidden gems, ancient temples, waterfalls, and eco-tourism spots on an interactive GIS map with live distance routing and cluster filtering.{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/explore-map.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="explore-map-container" id="map-container">
+  
+  <!-- Floating Top Control Bar -->
+  <div class="map-floating-bar" id="map-floating-bar">
+    <div class="bar-search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="map-search-input" placeholder="Search places on map..." autocomplete="off" aria-label="Search places on map">
+      <button class="search-clear-btn" id="search-clear" style="display:none;" aria-label="Clear search">✕</button>
+    </div>
+
+    <div class="bar-select-group">
+      <select id="map-district-filter" class="bar-select" aria-label="Filter by District">
+        <option value="">📍 All Districts</option>
+        {% for d in districts %}
+        <option value="{{ d.name }}">{{ d.name }}</option>
+        {% endfor %}
+      </select>
+
+      <select id="map-state-filter" class="bar-select" aria-label="Filter by State">
+        <option value="">🏛️ All States</option>
+        {% for state in states %}
+        <option value="{{ state.id }}">{{ state.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="bar-actions">
+      <button class="bar-btn" id="near-me-btn" title="Find places near your current location" aria-label="Find places near me">
+        <span class="btn-icon">📍</span>
+        <span class="btn-label">Near Me</span>
+      </button>
+
+      <button class="bar-btn" id="fullscreen-btn" title="Toggle Fullscreen Map" aria-label="Toggle Fullscreen">
+        <span class="btn-icon">⛶</span>
+        <span class="btn-label">Fullscreen</span>
+      </button>
+
+      <button class="bar-btn btn-reset" id="reset-filters-btn" title="Reset all filters" aria-label="Reset filters">
+        <span class="btn-icon">🔄</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Sidebar Drawer -->
+  <div class="map-sidebar" id="map-sidebar">
+    <div class="map-sidebar-header">
+      <div>
+        <h2 class="map-sidebar-title">🧭 Bihar GIS Explorer</h2>
+        <p style="font-size:0.75rem;color:var(--text-muted);margin-top:2px;">
+          Showing <strong id="map-results-count" style="color:var(--primary);">0</strong> destinations
+        </p>
+      </div>
+      <button class="map-sidebar-close" id="sidebar-close" aria-label="Close sidebar">✕</button>
+    </div>
+
+    <!-- Category Chips Bar -->
+    <div class="map-filters">
+      <label class="map-filter-label">Filter by Category</label>
+      <div class="filter-chips" id="map-category-filters">
+        <button class="filter-chip active" data-category="">All</button>
+        <button class="filter-chip" data-category="hotel">🏨 Hotel</button>
+        <button class="filter-chip" data-category="hospital">🏥 Hospital</button>
+        <button class="filter-chip" data-category="petrol_pump">⛽ Petrol Pump</button>
+        <button class="filter-chip" data-category="restaurant">🍽️ Restaurant</button>
+        <button class="filter-chip" data-category="pharmacy">💊 Pharmacy</button>
+        <button class="filter-chip" data-category="atm">🏧 ATM</button>
+        <button class="filter-chip" data-category="police_station">👮 Police Station</button>
+        <button class="filter-chip" data-category="bus_stand">🚌 Bus Stand</button>
+        <button class="filter-chip" data-category="railway_station">🚂 Railway Station</button>
+        <button class="filter-chip" data-category="parking">🅿️ Parking</button>
+        {% for code, label in categories %}
+        <button class="filter-chip" data-category="{{ code }}">{{ label }}</button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Place Selected Detail Panel -->
+    <div class="map-place-preview" id="map-place-preview" style="display:none;">
+      <div class="map-preview-img-wrapper">
+        <div class="map-preview-img" id="preview-img"></div>
+        <span class="map-preview-badge" id="preview-category"></span>
+        <button class="preview-close-btn" id="preview-close" onclick="hidePreview()" aria-label="Close details">✕</button>
+      </div>
+      
+      <div class="map-preview-body">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+          <h3 class="map-preview-name" id="preview-name"></h3>
+          <div class="preview-rating" id="preview-rating">★ 4.5</div>
+        </div>
+        
+        <p class="map-preview-meta" id="preview-meta">📍 Bihar</p>
+        <p class="map-preview-distance" id="preview-distance" style="display:none;"></p>
+
+        <!-- Quick Attributes -->
+        <div class="preview-tags" id="preview-tags"></div>
+
+        <!-- Action Row -->
+        <div class="preview-actions">
+          <a href="#" class="btn btn-primary btn-sm flex-1" id="preview-link">Explore Details →</a>
+          <a href="#" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm" id="preview-directions-btn" title="Open Google Maps Directions">🧭 Route</a>
+        </div>
+
+        <!-- Nearby Recommendations Section -->
+        <div class="nearby-section" id="nearby-section" style="display:none;">
+          <h4 class="nearby-title">🌐 Nearby Attractions (<span id="nearby-radius">25km</span>)</h4>
+          <div class="nearby-list" id="nearby-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty / List overview -->
+    <div class="map-places-list" id="map-places-list"></div>
+  </div>
+
+  <!-- Map Main Container -->
+  <div class="map-main" id="explore-map"></div>
+
+  <!-- Mobile Floating Navigation Bar -->
+  <div class="mobile-map-controls">
+    <button class="mobile-control-btn" id="mobile-toggle-filters">
+      <span>🎛️ Filters</span>
+    </button>
+    <button class="mobile-control-btn primary" id="mobile-near-me">
+      <span>📍 Near Me</span>
+    </button>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+const ALL_PLACES = {{ places | tojson | safe }};
+
+// Helper: Escape HTML to prevent XSS
+function escapeHTML(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// State variables
+let userLat = null;
+let userLng = null;
+let activeMarker = null;
+let activePlace = null;
+let userLocationMarker = null;
+
+// Initialize Leaflet Map centered on Bihar
+const map = L.map('explore-map', {
+  zoomControl: false,
+  fadeAnimation: true,
+  markerZoomAnimation: true
+}).setView([25.0961, 85.3131], 8); // Bihar center
+
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+// Light Tile Layer with CARTO
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+  maxZoom: 19,
+  subdomains: 'abcd'
+}).addTo(map);
+
+// Category Colors & Icons
+const CATEGORY_META = {
+  'temple': { color: '#f59e0b', icon: '🛕', label: 'Temple' },
+  'waterfall': { color: '#06b6d4', icon: '💧', label: 'Waterfall' },
+  'nature': { color: '#10b981', icon: '🌿', label: 'Nature' },
+  'historical': { color: '#8b5cf6', icon: '🏛️', label: 'Historical' },
+  'fort': { color: '#d97706', icon: '🏰', label: 'Fort' },
+  'religious': { color: '#f97316', icon: '🙏', label: 'Religious' },
+  'hidden_gem': { color: '#ec4899', icon: '💎', label: 'Hidden Gem' },
+  'tourist_spot': { color: '#6366f1', icon: '📍', label: 'Spot' },
+  'park': { color: '#22c55e', icon: '🌳', label: 'Park' },
+  'lake': { color: '#0284c7', icon: '🌊', label: 'Lake' },
+  'default': { color: '#6366f1', icon: '📍', label: 'Place' }
+};
+
+function getCategoryMeta(cat) {
+  return CATEGORY_META[cat] || CATEGORY_META['default'];
+}
+
+// Custom Marker Clustering Group
+const clusterGroup = L.markerClusterGroup({
+  disableClusteringAtZoom: 15,
+  maxClusterRadius: 40,
+  showCoverageOnHover: false,
+  spiderfyOnMaxZoom: true,
+  iconCreateFunction: function(cluster) {
+    const count = cluster.getChildCount();
+    let size = 'small';
+    let diameter = 36;
+    if (count > 20) { size = 'large'; diameter = 48; }
+    else if (count > 8) { size = 'medium'; diameter = 42; }
+
+    return L.divIcon({
+      html: `<div class="cluster-badge cluster-${size}"><span>${count}</span></div>`,
+      className: 'custom-cluster-marker',
+      iconSize: L.point(diameter, diameter)
+    });
+  }
+});
+map.addLayer(clusterGroup);
+
+// Custom Marker Icon Creator
+function createMarkerIcon(place) {
+  const meta = getCategoryMeta(place.category);
+  const isSpecial = place.is_featured || place.is_hidden_gem;
+  const size = isSpecial ? 36 : 30;
+
+  return L.divIcon({
+    className: 'gis-custom-marker',
+    html: `
+      <div class="gis-marker-inner ${place.is_featured ? 'pulse-gold' : ''} ${place.is_hidden_gem ? 'pulse-pink' : ''}"
+           style="background:${meta.color}; width:${size}px; height:${size}px;">
+        <span class="marker-emoji">${meta.icon}</span>
+      </div>
+    `,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2]
+  });
+}
+
+// Render Markers onto Cluster Group
+let markerMap = new Map();
+
+function renderMarkers(places) {
+  clusterGroup.clearLayers();
+  markerMap.clear();
+  const listContainer = document.getElementById('map-places-list');
+  listContainer.innerHTML = '';
+
+  if (places.length === 0) {
+    listContainer.innerHTML = `
+      <div class="map-empty-state">
+        <span class="empty-icon">🔍</span>
+        <h4 style="color:white;font-weight:700;margin-bottom:4px;">No places found</h4>
+        <p style="font-size:0.78rem;color:var(--text-muted);margin-bottom:12px;">Try adjusting your search or filters.</p>
+        <button class="bar-btn" onclick="resetAllFilters()" style="margin:0 auto;">Reset Filters</button>
+      </div>
+    `;
+    document.getElementById('map-results-count').textContent = '0';
+    return;
+  }
+
+  places.forEach(p => {
+    const lat = parseFloat(p.latitude);
+    const lng = parseFloat(p.longitude);
+    if (isNaN(lat) || isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
+
+    const marker = L.marker([lat, lng], {
+      icon: createMarkerIcon(p)
+    });
+
+    // Custom Rich Popup
+    const popupContent = buildPopupHTML(p, lat, lng);
+    marker.bindPopup(popupContent, {
+      className: 'gis-custom-popup',
+      maxWidth: 280,
+      closeButton: false
+    });
+
+    marker.on('click', () => {
+      selectPlace(p, marker);
+    });
+
+    clusterGroup.addLayer(marker);
+    markerMap.set(p.id, marker);
+
+    // Sidebar list item
+    const item = createSidebarListItem(p);
+    listContainer.appendChild(item);
+  });
+
+  document.getElementById('map-results-count').textContent = markerMap.size;
+}
+
+const CATEGORY_FALLBACK_IMAGES = {
+  'waterfall': '/static/placeholder-waterfall.svg',
+  'temple': '/static/placeholder-temple.svg',
+  'religious': '/static/placeholder-temple.svg',
+  'fort': '/static/placeholder-fort.svg',
+  'historical': '/static/placeholder-fort.svg',
+  'nature': '/static/placeholder-nature.svg',
+  'hill_station': '/static/placeholder-nature.svg',
+  'park': '/static/placeholder-nature.svg',
+  'lake': '/static/placeholder-nature.svg',
+  'wildlife': '/static/placeholder-nature.svg',
+  'default': '/static/placeholder-place.svg'
+};
+
+function getCategoryFallbackSvg(category) {
+  const cat = category ? String(category).toLowerCase() : 'default';
+  return CATEGORY_FALLBACK_IMAGES[cat] || CATEGORY_FALLBACK_IMAGES['default'];
+}
+
+function getPlaceImageUrl(p) {
+  if (p && p.cover_image && String(p.cover_image).trim() !== '') {
+    if (p.cover_image.startsWith('http')) return escapeHTML(p.cover_image);
+    return '/static/uploads/places/' + escapeHTML(p.cover_image);
+  }
+  return getCategoryFallbackSvg(p ? p.category : null);
+}
+
+// Build Leaflet Popup Content HTML (XSS Sanitized)
+function buildPopupHTML(p, lat, lng) {
+  const meta = getCategoryMeta(p.category);
+  const fallbackSvg = getCategoryFallbackSvg(p.category);
+  const imgSrc = getPlaceImageUrl(p);
+  const rawMapsLink = p.maps_link && p.maps_link.startsWith('http') ? p.maps_link : null;
+  const directionsUrl = rawMapsLink || `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+  const distText = p.distance_km ? `⚡ ${p.distance_km} km away` : '';
+
+  return `
+    <div class="popup-card">
+      <div class="popup-img-wrap" style="position:relative;height:140px;overflow:hidden;background:#090d16;">
+        <img src="${imgSrc}" alt="${escapeHTML(p.name)}" class="popup-img-el" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.onerror=null;this.src='${fallbackSvg}';">
+        <div class="popup-img-overlay" style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.05) 0%,rgba(0,0,0,0.65) 100%);pointer-events:none;"></div>
+        <span class="popup-cat-badge" style="background:${meta.color};">${meta.icon} ${escapeHTML(meta.label)}</span>
+        ${p.is_hidden_gem ? '<span class="popup-gem-badge" style="position:absolute;top:8px;right:8px;padding:3px 8px;border-radius:12px;background:rgba(236,72,153,0.9);color:white;font-size:0.65rem;font-weight:700;z-index:2;">💎 Gem</span>' : ''}
+      </div>
+      <div class="popup-body">
+        <h4 class="popup-title">${escapeHTML(p.name)}</h4>
+        <div class="popup-meta">
+          <span>📍 ${escapeHTML(p.district_name || p.state_name)}</span>
+          <span style="color:#f59e0b;font-weight:700;">★ ${p.avg_rating || 4.5}</span>
+        </div>
+        ${distText ? `<div class="popup-dist">${escapeHTML(distText)}</div>` : ''}
+        <div class="popup-btns">
+          <a href="/place/${escapeHTML(p.slug)}" class="popup-btn primary">View Details →</a>
+          <a href="${escapeHTML(directionsUrl)}" target="_blank" rel="noopener noreferrer" class="popup-btn outline">🧭 Route</a>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Create Sidebar List Item HTML Element (XSS Sanitized)
+function createSidebarListItem(p) {
+  const meta = getCategoryMeta(p.category);
+  const fallbackSvg = getCategoryFallbackSvg(p.category);
+  const div = document.createElement('div');
+  div.className = 'sidebar-place-item';
+  div.dataset.id = p.id;
+
+  const imgSrc = getPlaceImageUrl(p);
+
+  div.innerHTML = `
+    <div class="spi-thumb" style="overflow:hidden;position:relative;background:#090d16;">
+      <img src="${imgSrc}" alt="${escapeHTML(p.name)}" style="width:100%;height:100%;object-fit:cover;" onerror="this.onerror=null;this.src='${fallbackSvg}';">
+    </div>
+    <div class="spi-info">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+        <span class="spi-badge" style="background:${meta.color}22;color:${meta.color};border-color:${meta.color}44;">${meta.icon} ${escapeHTML(meta.label)}</span>
+        ${p.is_hidden_gem ? '<span class="spi-badge gem">💎 Gem</span>' : ''}
+      </div>
+      <h4 class="spi-name">${escapeHTML(p.name)}</h4>
+      <div class="spi-sub">
+        <span>📍 ${escapeHTML(p.district_name || p.state_name)}</span>
+        <span>★ ${p.avg_rating || 4.5}</span>
+        ${p.distance_km ? `<span style="color:var(--primary);">⚡ ${p.distance_km}km</span>` : ''}
+      </div>
+    </div>
+  `;
+
+  div.addEventListener('click', () => {
+    const marker = markerMap.get(p.id);
+    if (marker) {
+      map.flyTo([parseFloat(p.latitude), parseFloat(p.longitude)], 13, { duration: 1.2 });
+      marker.openPopup();
+      selectPlace(p, marker);
+    }
+  });
+
+  return div;
+}
+
+// Select Place and Show Rich Preview Drawer (XSS Sanitized)
+function selectPlace(p, marker) {
+  activePlace = p;
+  activeMarker = marker;
+
+  const preview = document.getElementById('map-place-preview');
+  const imgDiv = document.getElementById('preview-img');
+  const meta = getCategoryMeta(p.category);
+
+  const imgSrc = p.cover_image 
+    ? (p.cover_image.startsWith('http') ? escapeHTML(p.cover_image) : '/static/uploads/places/' + escapeHTML(p.cover_image))
+    : '/static/placeholder-place.svg';
+  
+  imgDiv.style.backgroundImage = `url('${imgSrc}')`;
+  document.getElementById('preview-name').textContent = p.name;
+  document.getElementById('preview-meta').textContent = `📍 ${p.district_name ? p.district_name + ', ' : ''}${p.state_name}`;
+  document.getElementById('preview-category').textContent = `${meta.icon} ${meta.label}`;
+  document.getElementById('preview-category').style.background = meta.color;
+  document.getElementById('preview-rating').textContent = `★ ${p.avg_rating || 4.5} (${p.review_count || 12})`;
+  document.getElementById('preview-link').href = '/place/' + encodeURIComponent(p.slug);
+
+  const rawMapsLink = p.maps_link && p.maps_link.startsWith('http') ? p.maps_link : null;
+  const directionsUrl = rawMapsLink || `https://www.google.com/maps/dir/?api=1&destination=${p.latitude},${p.longitude}`;
+  document.getElementById('preview-directions-btn').href = directionsUrl;
+
+  // Distance text
+  const distEl = document.getElementById('preview-distance');
+  if (p.distance_km) {
+    distEl.textContent = `⚡ ${p.distance_km} km from your location`;
+    distEl.style.display = 'block';
+  } else {
+    distEl.style.display = 'none';
+  }
+
+  // Quick Tags
+  const tagsEl = document.getElementById('preview-tags');
+  let tagsHTML = '';
+  if (p.best_season) tagsHTML += `<span class="ptag">📅 ${escapeHTML(p.best_season)}</span>`;
+  if (p.best_time_to_visit) tagsHTML += `<span class="ptag">🕒 ${escapeHTML(p.best_time_to_visit)}</span>`;
+  if (p.is_hidden_gem) tagsHTML += `<span class="ptag gem">💎 Hidden Gem</span>`;
+  tagsEl.innerHTML = tagsHTML;
+
+  // Populate Nearby Recommendations (within 25km)
+  populateNearbyPlaces(p);
+
+  preview.style.display = 'block';
+  document.getElementById('map-sidebar').classList.add('open');
+}
+
+function hidePreview() {
+  document.getElementById('map-place-preview').style.display = 'none';
+  activePlace = null;
+}
+
+// Find & Populate Nearby Places on Map
+function populateNearbyPlaces(target) {
+  const nearbySection = document.getElementById('nearby-section');
+  const nearbyList = document.getElementById('nearby-list');
+  nearbyList.innerHTML = '';
+
+  const targetLat = parseFloat(target.latitude);
+  const targetLng = parseFloat(target.longitude);
+
+  const nearby = ALL_PLACES.filter(p => {
+    const lat = parseFloat(p.latitude);
+    const lng = parseFloat(p.longitude);
+    if (p.id === target.id || isNaN(lat) || isNaN(lng)) return false;
+    const d = calcDistance(targetLat, targetLng, lat, lng);
+    p._distToTarget = Math.round(d * 10) / 10;
+    return d <= 25; // 25 km radius
+  }).sort((a, b) => a._distToTarget - b._distToTarget).slice(0, 3);
+
+  if (nearby.length > 0) {
+    nearby.forEach(np => {
+      const meta = getCategoryMeta(np.category);
+      const item = document.createElement('a');
+      item.className = 'nearby-item';
+      item.href = `/place/${encodeURIComponent(np.slug)}`;
+      item.innerHTML = `
+        <div style="font-weight:600;color:var(--text-primary);font-size:0.82rem;">${meta.icon} ${escapeHTML(np.name)}</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);display:flex;justify-content:space-between;margin-top:2px;">
+          <span>📍 ${escapeHTML(np.district_name || 'Nearby')}</span>
+          <span style="color:var(--primary);font-weight:600;">${np._distToTarget} km away</span>
+        </div>
+      `;
+      nearbyList.appendChild(item);
+    });
+    nearbySection.style.display = 'block';
+  } else {
+    nearbySection.style.display = 'none';
+  }
+}
+
+// Haversine Distance Formula (km)
+function calcDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// Filter Logic Engine
+function applyFilters() {
+  const search = document.getElementById('map-search-input').value.trim().toLowerCase();
+  const cat = document.querySelector('#map-category-filters .filter-chip.active')?.dataset.category || '';
+  const district = document.getElementById('map-district-filter').value;
+  const stateId = document.getElementById('map-state-filter').value;
+
+  let filtered = ALL_PLACES.filter(p => {
+    const nameStr = (p.name || '').toLowerCase();
+    const distStr = (p.district_name || '').toLowerCase();
+
+    if (search && !nameStr.includes(search) && !distStr.includes(search)) {
+      return false;
+    }
+    if (cat && p.category !== cat) return false;
+    if (district && p.district_name !== district) return false;
+    if (stateId && p.state_id != stateId) return false;
+    return true;
+  });
+
+  // Calculate distance if user location is active
+  if (userLat !== null && userLng !== null) {
+    filtered.forEach(p => {
+      const lat = parseFloat(p.latitude);
+      const lng = parseFloat(p.longitude);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        p.distance_km = Math.round(calcDistance(userLat, userLng, lat, lng) * 10) / 10;
+      }
+    });
+    filtered.sort((a, b) => (a.distance_km || 9999) - (b.distance_km || 9999));
+  }
+
+  renderMarkers(filtered);
+
+  if (filtered.length > 0 && filtered.length < ALL_PLACES.length) {
+    const validCoords = filtered
+      .map(p => [parseFloat(p.latitude), parseFloat(p.longitude)])
+      .filter(([lat, lng]) => !isNaN(lat) && !isNaN(lng));
+
+    if (validCoords.length > 0) {
+      const bounds = L.latLngBounds(validCoords);
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+      }
+    }
+  }
+}
+
+// Reset All Filters Helper
+function resetAllFilters() {
+  document.getElementById('map-search-input').value = '';
+  document.getElementById('search-clear').style.display = 'none';
+  document.getElementById('map-district-filter').value = '';
+  document.getElementById('map-state-filter').value = '';
+  document.querySelectorAll('#map-category-filters .filter-chip').forEach(c => c.classList.remove('active'));
+  document.querySelector('#map-category-filters .filter-chip[data-category=""]').classList.add('active');
+  hidePreview();
+  applyFilters();
+  map.flyTo([25.0961, 85.3131], 8);
+}
+
+// Event Listeners
+document.getElementById('map-search-input').addEventListener('input', (e) => {
+  document.getElementById('search-clear').style.display = e.target.value ? 'block' : 'none';
+  applyFilters();
+});
+
+document.getElementById('search-clear').addEventListener('click', () => {
+  document.getElementById('map-search-input').value = '';
+  document.getElementById('search-clear').style.display = 'none';
+  applyFilters();
+});
+
+document.querySelectorAll('#map-category-filters .filter-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('#map-category-filters .filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    applyFilters();
+  });
+});
+
+document.getElementById('map-district-filter').addEventListener('change', applyFilters);
+document.getElementById('map-state-filter').addEventListener('change', applyFilters);
+document.getElementById('reset-filters-btn').addEventListener('click', resetAllFilters);
+
+// Near Me Geolocation Handler
+function triggerNearMe() {
+  if (!navigator.geolocation) {
+    alert('Geolocation is not supported by your browser');
+    return;
+  }
+
+  const btn = document.getElementById('near-me-btn');
+  btn.classList.add('loading');
+
+  navigator.geolocation.getCurrentPosition(pos => {
+    userLat = pos.coords.latitude;
+    userLng = pos.coords.longitude;
+    btn.classList.remove('loading');
+
+    // Fly to user location
+    map.flyTo([userLat, userLng], 11, { duration: 1.5 });
+
+    // Place user marker
+    if (userLocationMarker) map.removeLayer(userLocationMarker);
+    userLocationMarker = L.marker([userLat, userLng], {
+      icon: L.divIcon({
+        className: 'user-geo-marker',
+        html: '<div class="user-pulse-dot"><div class="user-pulse-ring"></div></div>',
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      })
+    }).addTo(map).bindPopup('<strong>📍 You Are Here</strong>').openPopup();
+
+    applyFilters();
+  }, err => {
+    btn.classList.remove('loading');
+    alert('Could not retrieve your location. Please check location permissions.');
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
+document.getElementById('near-me-btn').addEventListener('click', triggerNearMe);
+document.getElementById('mobile-near-me').addEventListener('click', triggerNearMe);
+
+// Fullscreen Toggle
+document.getElementById('fullscreen-btn').addEventListener('click', () => {
+  const container = document.getElementById('map-container');
+  container.classList.toggle('is-fullscreen');
+  setTimeout(() => map.invalidateSize(), 300);
+});
+
+// Sidebar Drawer Controls
+document.getElementById('sidebar-close').addEventListener('click', () => {
+  document.getElementById('map-sidebar').classList.remove('open');
+});
+
+document.getElementById('mobile-toggle-filters').addEventListener('click', () => {
+  document.getElementById('map-sidebar').classList.toggle('open');
+});
+
+// Keyboard Accessibility: Escape key dismisses drawer & fullscreen
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const preview = document.getElementById('map-place-preview');
+    const container = document.getElementById('map-container');
+    if (preview && preview.style.display !== 'none') {
+      hidePreview();
+    } else if (container && container.classList.contains('is-fullscreen')) {
+      container.classList.remove('is-fullscreen');
+      setTimeout(() => map.invalidateSize(), 300);
+    }
+  }
+});
+
+// Initial Render
+renderMarkers(ALL_PLACES);
+</script>
+{% endblock %}

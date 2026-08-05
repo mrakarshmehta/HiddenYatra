@@ -1,0 +1,758 @@
+{% extends "base.html" %}
+{% block title %}Share a Hidden Gem — {{ app_name }}{% endblock %}
+{% block meta_desc %}Submit a tourist place in Bihar that deserves to be discovered. Share photos, location, local food tips, and more.{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+/* ── WIZARD STYLES ── */
+.wizard-container { max-width: 780px; margin: 0 auto; padding: 0 var(--space-lg) var(--space-2xl); }
+
+/* Progress Bar */
+.wizard-progress { display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: var(--space-2xl); padding: var(--space-lg) 0; }
+.progress-step { display: flex; flex-direction: column; align-items: center; position: relative; flex: 1; }
+.progress-dot { width: 40px; height: 40px; border-radius: 50%; background: var(--bg-card); border: 2px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 1rem; z-index: 2; transition: all 0.3s; }
+.progress-step.active .progress-dot { background: var(--gradient-saffron); border-color: var(--saffron); color: white; transform: scale(1.1); box-shadow: 0 0 16px rgba(255,107,53,0.3); }
+.progress-step.completed .progress-dot { background: var(--emerald); border-color: var(--emerald); color: white; }
+.progress-label { font-size: 0.7rem; color: var(--text-muted); margin-top: 6px; text-align: center; font-weight: 500; }
+.progress-step.active .progress-label { color: var(--saffron); font-weight: 600; }
+.progress-step.completed .progress-label { color: var(--emerald); }
+.progress-line { flex: 1; height: 2px; background: var(--border-color); margin: 0 -8px; position: relative; top: -12px; }
+.progress-line.active { background: var(--emerald); }
+
+/* Steps */
+.wizard-step { display: none; animation: stepIn 0.35s ease; }
+.wizard-step.active { display: block; }
+@keyframes stepIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+/* Step Card */
+.step-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-xl); padding: var(--space-xl); margin-bottom: var(--space-lg); }
+.step-card-title { font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; margin-bottom: var(--space-lg); display: flex; align-items: center; gap: 8px; }
+.step-card-title span { font-size: 1.3rem; }
+
+/* Category Selection Grid */
+.category-select-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: var(--space-sm); }
+.category-option { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: var(--space-md); background: var(--bg-elevated); border: 2px solid var(--border-color); border-radius: var(--radius-lg); cursor: pointer; transition: all 0.2s; text-align: center; }
+.category-option:hover { border-color: var(--saffron); transform: translateY(-2px); }
+.category-option.selected { border-color: var(--saffron); background: rgba(255,107,53,0.08); box-shadow: 0 0 12px rgba(255,107,53,0.15); }
+.category-option input { display: none; }
+.category-icon { font-size: 1.8rem; }
+.category-label { font-size: 0.75rem; font-weight: 500; color: var(--text-secondary); }
+.category-option.selected .category-label { color: var(--saffron); font-weight: 600; }
+
+/* Image Upload Zone */
+.upload-zone { border: 2px dashed var(--border-color); border-radius: var(--radius-xl); padding: var(--space-2xl); text-align: center; cursor: pointer; transition: all 0.3s; background: var(--bg-elevated); position: relative; }
+.upload-zone:hover, .upload-zone.dragover { border-color: var(--saffron); background: rgba(255,107,53,0.04); }
+.upload-zone-icon { font-size: 3rem; display: block; margin-bottom: var(--space-md); }
+.upload-zone-title { font-family: var(--font-heading); font-size: 1.1rem; font-weight: 600; margin-bottom: 4px; }
+.upload-zone-hint { font-size: 0.85rem; color: var(--text-muted); }
+.upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+/* Image Preview Grid */
+.image-preview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-md); margin-top: var(--space-lg); }
+.image-preview-item { position: relative; border-radius: var(--radius-md); overflow: hidden; aspect-ratio: 4/3; background: var(--bg-elevated); border: 1px solid var(--border-color); }
+.image-preview-item img { width: 100%; height: 100%; object-fit: cover; }
+.image-preview-item .cover-badge { position: absolute; top: 6px; left: 6px; padding: 2px 8px; background: var(--gradient-saffron); border-radius: var(--radius-full); font-size: 0.65rem; font-weight: 600; color: white; }
+.image-preview-remove { position: absolute; top: 6px; right: 6px; width: 24px; height: 24px; border-radius: 50%; background: rgba(0,0,0,0.6); color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; transition: background 0.2s; }
+.image-preview-remove:hover { background: var(--rose); }
+.image-counter { font-size: 0.85rem; color: var(--text-muted); margin-top: var(--space-sm); }
+.image-counter strong { color: var(--saffron); }
+
+/* Chip Selectors */
+.chip-group { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
+.chip-option { padding: 8px 16px; border-radius: var(--radius-full); border: 1px solid var(--border-color); background: var(--bg-elevated); cursor: pointer; font-size: 0.85rem; color: var(--text-secondary); transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
+.chip-option:hover { border-color: var(--saffron); }
+.chip-option.selected { border-color: var(--saffron); background: rgba(255,107,53,0.1); color: var(--saffron); font-weight: 600; }
+.chip-option input { display: none; }
+
+/* Dynamic List */
+.dynamic-list { display: flex; flex-direction: column; gap: var(--space-sm); }
+.dynamic-row { display: grid; grid-template-columns: 1fr 1fr auto; gap: var(--space-sm); align-items: start; padding: var(--space-sm); background: var(--bg-elevated); border-radius: var(--radius-md); border: 1px solid var(--border-light); }
+.dynamic-row-3col { grid-template-columns: 1fr 1fr 1fr auto; }
+.dynamic-add { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px dashed var(--border-color); border-radius: var(--radius-full); color: var(--teal); font-size: 0.85rem; cursor: pointer; transition: all 0.2s; margin-top: var(--space-sm); font-family: var(--font-body); }
+.dynamic-add:hover { border-color: var(--teal); background: rgba(20,184,166,0.06); }
+.dynamic-remove { width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(244,63,94,0.1); color: var(--rose); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; transition: all 0.2s; }
+.dynamic-remove:hover { background: rgba(244,63,94,0.2); }
+
+/* Map Picker */
+.map-picker-wrap { border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border-color); margin-bottom: var(--space-md); }
+.map-picker { height: 280px; background: var(--bg-elevated); display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
+.map-coords { display: flex; gap: var(--space-md); }
+.coord-display { padding: 8px 14px; background: var(--bg-elevated); border-radius: var(--radius-md); font-family: monospace; font-size: 0.85rem; color: var(--teal); border: 1px solid var(--border-color); flex: 1; text-align: center; }
+
+/* Wizard Navigation */
+.wizard-nav { display: flex; justify-content: space-between; align-items: center; padding-top: var(--space-lg); border-top: 1px solid var(--border-light); margin-top: var(--space-lg); }
+.wizard-nav .btn { min-width: 140px; }
+.step-counter { font-size: 0.85rem; color: var(--text-muted); }
+
+/* Success Animation */
+.submit-success-icon { font-size: 4rem; display: block; margin-bottom: var(--space-md); animation: bounceIn 0.6s ease; }
+@keyframes bounceIn { 0% { transform: scale(0); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
+@media (max-width: 768px) {
+  .category-select-grid { grid-template-columns: repeat(3, 1fr); }
+  .image-preview-grid { grid-template-columns: repeat(2, 1fr); }
+  .dynamic-row, .dynamic-row-3col { grid-template-columns: 1fr; }
+  .progress-label { font-size: 0.6rem; }
+  .progress-dot { width: 32px; height: 32px; font-size: 0.8rem; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Header -->
+<section class="page-header" style="text-align:center;">
+  <h1 class="page-title">Share a <span class="text-gradient-saffron">Hidden Gem</span> 💎</h1>
+  <p class="page-subtitle">Know a place in Bihar that the world should discover? Help us build the most complete tourism guide!</p>
+</section>
+
+<div class="wizard-container">
+
+{% if not session.get('user_id') %}
+<!-- ═══ LOGIN GATE FOR GUESTS ═══ -->
+<div class="step-card" style="text-align:center;padding:var(--space-3xl);">
+  <span style="font-size:3rem;display:block;margin-bottom:var(--space-md);">🔐</span>
+  <h2 style="font-family:var(--font-heading);margin-bottom:var(--space-sm);">Login Required</h2>
+  <p style="color:var(--text-muted);max-width:400px;margin:0 auto var(--space-xl);">You need to be logged in to suggest a place. This helps us credit your contribution and lets you track your submissions.</p>
+  <div style="display:flex;gap:var(--space-md);justify-content:center;flex-wrap:wrap;">
+    <a href="{{ url_for('auth.login') }}" class="btn btn-primary">Login</a>
+    <a href="{{ url_for('auth.signup') }}" class="btn btn-outline">Sign Up</a>
+  </div>
+</div>
+{% else %}
+
+<!-- Progress Indicator -->
+<div class="wizard-progress" id="wizard-progress">
+  <div class="progress-step active" data-step="1">
+    <div class="progress-dot">📍</div>
+    <div class="progress-label">Basic Info</div>
+  </div>
+  <div class="progress-line"></div>
+  <div class="progress-step" data-step="2">
+    <div class="progress-dot">📸</div>
+    <div class="progress-label">Photos</div>
+  </div>
+  <div class="progress-line"></div>
+  <div class="progress-step" data-step="3">
+    <div class="progress-dot">🗺️</div>
+    <div class="progress-label">Location</div>
+  </div>
+  <div class="progress-line"></div>
+  <div class="progress-step" data-step="4">
+    <div class="progress-dot">📝</div>
+    <div class="progress-label">Details</div>
+  </div>
+  <div class="progress-line"></div>
+  <div class="progress-step" data-step="5">
+    <div class="progress-dot">🍛</div>
+    <div class="progress-label">Food & Stay</div>
+  </div>
+  <div class="progress-line"></div>
+  <div class="progress-step" data-step="6">
+    <div class="progress-dot">✅</div>
+    <div class="progress-label">Submit</div>
+  </div>
+</div>
+
+<form method="POST" enctype="multipart/form-data" id="suggest-form">
+{{ csrf_input() }}
+
+<!-- ═══ STEP 1: Basic Info ═══ -->
+<div class="wizard-step active" data-step="1">
+  <div class="step-card">
+    <h2 class="step-card-title"><span>📍</span> Basic Information</h2>
+
+    <div class="form-group" style="margin-bottom:var(--space-lg);">
+      <label>Place Name *</label>
+      <input type="text" name="place_name" id="place_name" placeholder="e.g., Kakolat Waterfall, Rajgir Hot Springs..." class="form-input" required style="font-size:1.1rem;padding:14px;">
+    </div>
+
+    <div class="form-row" style="margin-bottom:var(--space-lg);">
+      <div class="form-group">
+        <label>District *</label>
+        <select name="district_name" id="district_name" class="form-input" required>
+          <option value="">Select District</option>
+          {% for d in districts %}
+          <option value="{{ d.name }}">{{ d.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Your Name</label>
+        <input type="text" name="submitter_name" placeholder="How should we credit you?" class="form-input" value="{{ session.get('display_name', '') }}">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Category *</label>
+      <div class="category-select-grid" id="category-grid">
+        {% for code, label in categories %}
+        <label class="category-option" data-cat="{{ code }}">
+          <input type="radio" name="category" value="{{ code }}" {% if loop.first %}checked{% endif %}>
+          <span class="category-icon">{{ category_icons.get(code, '📍') }}</span>
+          <span class="category-label">{{ label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="wizard-nav">
+    <div></div>
+    <span class="step-counter">Step 1 of 6</span>
+    <button type="button" class="btn btn-primary" onclick="goToStep(2)">Next → Photos</button>
+  </div>
+</div>
+
+<!-- ═══ STEP 2: Photos ═══ -->
+<div class="wizard-step" data-step="2">
+  <div class="step-card">
+    <h2 class="step-card-title"><span>📸</span> Photos of the Place</h2>
+    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:var(--space-lg);">Upload 1-8 beautiful photos. The first photo will be the cover image.</p>
+
+    <div class="upload-zone" id="upload-zone">
+      <input type="file" name="photos" id="photo-input" multiple accept="image/*">
+      <span class="upload-zone-icon">📷</span>
+      <p class="upload-zone-title">Drag & drop images here</p>
+      <p class="upload-zone-hint">or click to browse • JPG, PNG, WebP • Max 8 images</p>
+    </div>
+
+    <div class="image-preview-grid" id="image-preview-grid"></div>
+    <p class="image-counter" id="image-counter"></p>
+  </div>
+
+  <div class="wizard-nav">
+    <button type="button" class="btn btn-outline" onclick="goToStep(1)">← Back</button>
+    <span class="step-counter">Step 2 of 6</span>
+    <button type="button" class="btn btn-primary" onclick="goToStep(3)">Next → Location</button>
+  </div>
+</div>
+
+<!-- ═══ STEP 3: Smart Location ═══ -->
+<div class="wizard-step" data-step="3">
+  <div class="step-card">
+    <h2 class="step-card-title"><span>🗺️</span> Location</h2>
+    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:var(--space-lg);">Help travelers find this place. Choose the easiest option for you:</p>
+
+    <!-- 3 Smart Options -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:var(--space-md);margin-bottom:var(--space-xl);">
+      <!-- Option 1: Current Location -->
+      <button type="button" class="step-card" style="cursor:pointer;text-align:center;padding:var(--space-lg);border:2px solid var(--border-color);transition:all 0.3s;" id="loc-option-gps" onclick="useCurrentLocation()">
+        <span style="font-size:2rem;display:block;margin-bottom:8px;">📍</span>
+        <div style="font-weight:600;font-size:0.9rem;">Use My Location</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">If you're at the place now</div>
+      </button>
+
+      <!-- Option 2: Drop Pin -->
+      <button type="button" class="step-card" style="cursor:pointer;text-align:center;padding:var(--space-lg);border:2px solid var(--border-color);transition:all 0.3s;" id="loc-option-map" onclick="showMapPicker()">
+        <span style="font-size:2rem;display:block;margin-bottom:8px;">🗺️</span>
+        <div style="font-weight:600;font-size:0.9rem;">Drop Pin on Map</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">Select location on map</div>
+      </button>
+
+      <!-- Option 3: Google Maps Link -->
+      <button type="button" class="step-card" style="cursor:pointer;text-align:center;padding:var(--space-lg);border:2px solid var(--border-color);transition:all 0.3s;" id="loc-option-link" onclick="showLinkInput()">
+        <span style="font-size:2rem;display:block;margin-bottom:8px;">🔗</span>
+        <div style="font-weight:600;font-size:0.9rem;">Paste Maps Link</div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">From Google Maps</div>
+      </button>
+    </div>
+
+    <!-- Google Maps Link Input (hidden by default) -->
+    <div id="gmaps-link-section" style="display:none;margin-bottom:var(--space-lg);">
+      <label>Paste Google Maps Link</label>
+      <div style="display:flex;gap:var(--space-sm);">
+        <input type="text" id="gmaps-link" placeholder="https://maps.google.com/..." class="form-input" style="flex:1;">
+        <button type="button" class="btn btn-primary" onclick="extractFromLink()">Extract</button>
+      </div>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">Open Google Maps → Find place → Share → Copy link → Paste here</p>
+    </div>
+
+    <!-- Map Picker (hidden by default) -->
+    <div id="map-picker-section" style="display:none;">
+      <div class="map-picker-wrap">
+        <div id="location-map" style="height:300px;"></div>
+      </div>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin-top:4px;">Click on the map to place a pin, or drag the marker to adjust</p>
+    </div>
+
+    <!-- Location Status -->
+    <div id="loc-status" style="display:none;padding:var(--space-md);background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:var(--radius-md);margin-top:var(--space-md);">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:1.2rem;">✅</span>
+        <div>
+          <div style="font-weight:600;font-size:0.9rem;color:var(--accent-emerald);">Location captured!</div>
+          <div style="font-size:0.8rem;color:var(--text-muted);" id="loc-coords-display"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden inputs for actual lat/lng -->
+    <input type="hidden" name="latitude" id="latitude">
+    <input type="hidden" name="longitude" id="longitude">
+  </div>
+
+  <div class="wizard-nav">
+    <button type="button" class="btn btn-outline" onclick="goToStep(2)">← Back</button>
+    <span class="step-counter">Step 3 of 6</span>
+    <button type="button" class="btn btn-primary" onclick="goToStep(4)">Next → Details</button>
+  </div>
+</div>
+
+<!-- ═══ STEP 4: Description & Details ═══ -->
+<div class="wizard-step" data-step="4">
+  <div class="step-card">
+    <h2 class="step-card-title"><span>📝</span> Description & Details</h2>
+
+    <div class="form-group" style="margin-bottom:var(--space-lg);">
+      <label>Short Description * <span style="color:var(--text-muted);font-weight:400;">(1-2 lines)</span></label>
+      <input type="text" name="short_description" placeholder="A magical waterfall hidden in the hills of Nawada..." class="form-input" maxlength="200">
+    </div>
+
+    <div class="form-group" style="margin-bottom:var(--space-lg);">
+      <label>Detailed Description <span style="color:var(--text-muted);font-weight:400;">(Tell the full story)</span></label>
+      <textarea name="description" placeholder="Share your experience — How did you discover this place? What makes it special? What should travelers expect? Share the story that locals tell about this place..." class="form-textarea" rows="6"></textarea>
+    </div>
+
+    <div class="form-row" style="margin-bottom:var(--space-lg);">
+      <div class="form-group">
+        <label>Best Time to Visit</label>
+        <input type="text" name="best_time_to_visit" placeholder="e.g., October to March, Monsoon season" class="form-input">
+      </div>
+      <div class="form-group">
+        <label>Entry Fee</label>
+        <div class="chip-group" id="fee-chips">
+          <label class="chip-option selected"><input type="radio" name="entry_fee" value="Free" checked> 🆓 Free</label>
+          <label class="chip-option"><input type="radio" name="entry_fee" value="₹10-50"> 💰 ₹10-50</label>
+          <label class="chip-option"><input type="radio" name="entry_fee" value="₹50-200"> 💰 ₹50-200</label>
+          <label class="chip-option"><input type="radio" name="entry_fee" value="₹200+"> 💰 ₹200+</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Crowd Level</label>
+        <div class="chip-group" id="crowd-chips">
+          <label class="chip-option selected"><input type="radio" name="crowd_level" value="Low" checked> 🟢 Low</label>
+          <label class="chip-option"><input type="radio" name="crowd_level" value="Medium"> 🟡 Medium</label>
+          <label class="chip-option"><input type="radio" name="crowd_level" value="High"> 🔴 High</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Safety Level</label>
+        <div class="chip-group" id="safety-chips">
+          <label class="chip-option selected"><input type="radio" name="safety_level" value="Safe" checked> ✅ Safe</label>
+          <label class="chip-option"><input type="radio" name="safety_level" value="Moderate"> ⚠️ Moderate</label>
+          <label class="chip-option"><input type="radio" name="safety_level" value="Risky"> 🚨 Risky</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wizard-nav">
+    <button type="button" class="btn btn-outline" onclick="goToStep(3)">← Back</button>
+    <span class="step-counter">Step 4 of 6</span>
+    <button type="button" class="btn btn-primary" onclick="goToStep(5)">Next → Food & Stay</button>
+  </div>
+</div>
+
+<!-- ═══ STEP 5: Food, Stay & Local Tips ═══ -->
+<div class="wizard-step" data-step="5">
+  <div class="step-card">
+    <h2 class="step-card-title"><span>🍛</span> Nearby Food</h2>
+    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:var(--space-md);">What should travelers eat nearby? Add local food spots.</p>
+
+    <div class="dynamic-list" id="food-list">
+      <div class="dynamic-row">
+        <input type="text" name="food_name[]" placeholder="Food stall / restaurant name" class="form-input">
+        <input type="text" name="food_famous[]" placeholder="Famous for (e.g., Litti Chokha)" class="form-input">
+        <button type="button" class="dynamic-remove" onclick="removeRow(this)" title="Remove">✕</button>
+      </div>
+    </div>
+    <button type="button" class="dynamic-add" onclick="addFoodRow()">+ Add Another Food Place</button>
+  </div>
+
+  <div class="step-card">
+    <h2 class="step-card-title"><span>🏨</span> Nearby Stay</h2>
+    <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:var(--space-md);">Any hotels, lodges, or homestays nearby?</p>
+
+    <div class="dynamic-list" id="stay-list">
+      <div class="dynamic-row dynamic-row-3col">
+        <input type="text" name="stay_name[]" placeholder="Hotel / Lodge name" class="form-input">
+        <input type="text" name="stay_price[]" placeholder="Price range (₹500-2000)" class="form-input">
+        <input type="text" name="stay_contact[]" placeholder="Phone (optional)" class="form-input">
+        <button type="button" class="dynamic-remove" onclick="removeRow(this)" title="Remove">✕</button>
+      </div>
+    </div>
+    <button type="button" class="dynamic-add" onclick="addStayRow()">+ Add Another Stay Option</button>
+  </div>
+
+  <div class="step-card">
+    <h2 class="step-card-title"><span>💡</span> Local Tips & Secrets</h2>
+    <div class="form-group">
+      <textarea name="local_tips" placeholder="Share insider tips:&#10;• Best route to reach?&#10;• Morning or evening visit better?&#10;• Any seasonal warnings?&#10;• Hidden advice from locals?&#10;• What to carry?" class="form-textarea" rows="5"></textarea>
+    </div>
+  </div>
+
+  <div class="wizard-nav">
+    <button type="button" class="btn btn-outline" onclick="goToStep(4)">← Back</button>
+    <span class="step-counter">Step 5 of 6</span>
+    <button type="button" class="btn btn-primary" onclick="goToStep(6)">Next → Review & Submit</button>
+  </div>
+</div>
+
+<!-- ═══ STEP 6: Review & Submit ═══ -->
+<div class="wizard-step" data-step="6">
+  <div class="step-card" style="text-align:center;">
+    <span class="submit-success-icon">🚀</span>
+    <h2 class="step-card-title" style="justify-content:center;">Ready to Share!</h2>
+    <p style="color:var(--text-secondary);max-width:500px;margin:0 auto var(--space-xl);">
+      Your contribution will help thousands of travelers discover Bihar's hidden treasures.
+      Our team will review your submission and publish it.
+    </p>
+
+    <!-- Quick Summary -->
+    <div style="text-align:left;background:var(--bg-elevated);border-radius:var(--radius-lg);padding:var(--space-lg);margin-bottom:var(--space-xl);">
+      <h3 style="font-size:0.9rem;color:var(--text-muted);text-transform:uppercase;margin-bottom:var(--space-md);">Submission Summary</h3>
+      <div class="fact-list" id="review-summary">
+        <div class="fact-row"><span class="fact-label">Place</span><span class="fact-value" id="rev-name">—</span></div>
+        <div class="fact-row"><span class="fact-label">District</span><span class="fact-value" id="rev-district">—</span></div>
+        <div class="fact-row"><span class="fact-label">Category</span><span class="fact-value" id="rev-category">—</span></div>
+        <div class="fact-row"><span class="fact-label">Photos</span><span class="fact-value" id="rev-photos">0</span></div>
+        <div class="fact-row"><span class="fact-label">Location</span><span class="fact-value" id="rev-location">—</span></div>
+      </div>
+    </div>
+
+    <div class="form-note" style="margin-bottom:var(--space-xl);">
+      <p>📝 Your submission will be reviewed by our team. Approved places will appear on HiddenYatra with your name as contributor!</p>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-lg" style="font-size:1.1rem;padding:16px 40px;">
+      🌟 Share This Place with the World
+    </button>
+  </div>
+
+  <div class="wizard-nav">
+    <button type="button" class="btn btn-outline" onclick="goToStep(5)">← Back to Edit</button>
+    <span class="step-counter">Step 6 of 6</span>
+    <div></div>
+  </div>
+</div>
+
+</form>
+{% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function() {
+  'use strict';
+
+  let currentStep = 1;
+  const totalSteps = 6;
+  let uploadedFiles = [];
+
+  // ── STEP NAVIGATION ──
+  window.goToStep = function(step) {
+    // Validate before advancing
+    if (step > currentStep) {
+      if (!validateStep(currentStep)) return;
+    }
+
+    // Hide all, show target
+    document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active'));
+    document.querySelector(`.wizard-step[data-step="${step}"]`).classList.add('active');
+
+    // Update progress
+    document.querySelectorAll('.progress-step').forEach(s => {
+      const sNum = parseInt(s.dataset.step);
+      s.classList.remove('active', 'completed');
+      if (sNum === step) s.classList.add('active');
+      else if (sNum < step) s.classList.add('completed');
+    });
+    document.querySelectorAll('.progress-line').forEach((line, i) => {
+      line.classList.toggle('active', i < step - 1);
+    });
+
+    currentStep = step;
+
+    // Update review summary on last step
+    if (step === 6) updateReviewSummary();
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  function validateStep(step) {
+    if (step === 1) {
+      const name = document.getElementById('place_name').value.trim();
+      const dist = document.getElementById('district_name').value;
+      if (!name) { alert('Please enter the place name.'); document.getElementById('place_name').focus(); return false; }
+      if (!dist) { alert('Please select a district.'); return false; }
+    }
+    return true;
+  }
+
+  function updateReviewSummary() {
+    document.getElementById('rev-name').textContent = document.getElementById('place_name').value || '—';
+    document.getElementById('rev-district').textContent = document.getElementById('district_name').value || '—';
+    const cat = document.querySelector('input[name="category"]:checked');
+    document.getElementById('rev-category').textContent = cat ? cat.closest('.category-option').querySelector('.category-label').textContent : '—';
+    document.getElementById('rev-photos').textContent = uploadedFiles.length + ' photos';
+    const lat = document.getElementById('latitude').value;
+    const lng = document.getElementById('longitude').value;
+    document.getElementById('rev-location').textContent = (lat && lng) ? `${parseFloat(lat).toFixed(4)}, ${parseFloat(lng).toFixed(4)}` : 'Not set';
+  }
+
+  // ── CATEGORY SELECTION ──
+  document.querySelectorAll('.category-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      document.querySelectorAll('.category-option').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      opt.querySelector('input').checked = true;
+    });
+  });
+  // Set first as selected
+  const firstCat = document.querySelector('.category-option');
+  if (firstCat) firstCat.classList.add('selected');
+
+  // ── CHIP SELECTORS ──
+  document.querySelectorAll('.chip-group').forEach(group => {
+    group.querySelectorAll('.chip-option').forEach(chip => {
+      chip.addEventListener('click', () => {
+        group.querySelectorAll('.chip-option').forEach(c => c.classList.remove('selected'));
+        chip.classList.add('selected');
+      });
+    });
+  });
+
+  // ── IMAGE UPLOAD ──
+  const uploadZone = document.getElementById('upload-zone');
+  const photoInput = document.getElementById('photo-input');
+  const previewGrid = document.getElementById('image-preview-grid');
+  const counter = document.getElementById('image-counter');
+
+  // Drag & Drop
+  ['dragenter', 'dragover'].forEach(e => {
+    uploadZone.addEventListener(e, (ev) => { ev.preventDefault(); uploadZone.classList.add('dragover'); });
+  });
+  ['dragleave', 'drop'].forEach(e => {
+    uploadZone.addEventListener(e, (ev) => { ev.preventDefault(); uploadZone.classList.remove('dragover'); });
+  });
+  uploadZone.addEventListener('drop', (e) => {
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+    handleFiles(files);
+  });
+
+  photoInput.addEventListener('change', () => {
+    handleFiles(Array.from(photoInput.files));
+  });
+
+  function handleFiles(files) {
+    const remaining = 8 - uploadedFiles.length;
+    const toAdd = files.slice(0, remaining);
+
+    toAdd.forEach(file => {
+      // Compress client-side
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          // Resize if too large
+          const canvas = document.createElement('canvas');
+          let w = img.width, h = img.height;
+          if (w > 1600) { h = Math.round(h * 1600 / w); w = 1600; }
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+
+          canvas.toBlob((blob) => {
+            const compressedFile = new File([blob], file.name, { type: 'image/jpeg' });
+            uploadedFiles.push({ file: compressedFile, url: e.target.result, name: file.name });
+            renderPreviews();
+          }, 'image/jpeg', 0.8);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function renderPreviews() {
+    previewGrid.innerHTML = '';
+    uploadedFiles.forEach((item, i) => {
+      const div = document.createElement('div');
+      div.className = 'image-preview-item';
+      div.innerHTML = `
+        <img src="${item.url}" alt="${item.name}">
+        ${i === 0 ? '<span class="cover-badge">📷 Cover</span>' : ''}
+        <button type="button" class="image-preview-remove" onclick="removeImage(${i})">✕</button>
+      `;
+      previewGrid.appendChild(div);
+    });
+    counter.innerHTML = uploadedFiles.length > 0
+      ? `<strong>${uploadedFiles.length}</strong> / 8 photos selected ${uploadedFiles.length === 0 ? '(minimum 1 recommended)' : ''}`
+      : '';
+
+    // Rebuild file input with DataTransfer
+    rebuildFileInput();
+  }
+
+  window.removeImage = function(index) {
+    uploadedFiles.splice(index, 1);
+    renderPreviews();
+  };
+
+  function rebuildFileInput() {
+    const dt = new DataTransfer();
+    uploadedFiles.forEach(item => dt.items.add(item.file));
+    photoInput.files = dt.files;
+  }
+
+  // ── DYNAMIC FOOD ROWS ──
+  window.addFoodRow = function() {
+    const list = document.getElementById('food-list');
+    const row = document.createElement('div');
+    row.className = 'dynamic-row';
+    row.innerHTML = `
+      <input type="text" name="food_name[]" placeholder="Food stall / restaurant name" class="form-input">
+      <input type="text" name="food_famous[]" placeholder="Famous for (e.g., Litti Chokha)" class="form-input">
+      <button type="button" class="dynamic-remove" onclick="removeRow(this)" title="Remove">✕</button>
+    `;
+    list.appendChild(row);
+  };
+
+  // ── DYNAMIC STAY ROWS ──
+  window.addStayRow = function() {
+    const list = document.getElementById('stay-list');
+    const row = document.createElement('div');
+    row.className = 'dynamic-row dynamic-row-3col';
+    row.innerHTML = `
+      <input type="text" name="stay_name[]" placeholder="Hotel / Lodge name" class="form-input">
+      <input type="text" name="stay_price[]" placeholder="Price range (₹500-2000)" class="form-input">
+      <input type="text" name="stay_contact[]" placeholder="Phone (optional)" class="form-input">
+      <button type="button" class="dynamic-remove" onclick="removeRow(this)" title="Remove">✕</button>
+    `;
+    list.appendChild(row);
+  };
+
+  window.removeRow = function(btn) {
+    const row = btn.closest('.dynamic-row');
+    const list = row.parentElement;
+    if (list.children.length > 1) {
+      row.remove();
+    } else {
+      row.querySelectorAll('input').forEach(i => i.value = '');
+    }
+  };
+
+  // ── SMART LOCATION PICKER ──
+  let locMap = null;
+  let locMarker = null;
+
+  function setLocation(lat, lng) {
+    document.getElementById('latitude').value = lat;
+    document.getElementById('longitude').value = lng;
+    document.getElementById('loc-status').style.display = 'block';
+    document.getElementById('loc-coords-display').textContent = lat.toFixed(6) + ', ' + lng.toFixed(6);
+  }
+
+  // Option 1: Use Current Location (GPS)
+  window.useCurrentLocation = function() {
+    const btn = document.getElementById('loc-option-gps');
+    btn.style.borderColor = 'var(--primary)';
+    btn.querySelector('div').textContent = 'Detecting...';
+
+    if (!navigator.geolocation) {
+      alert('Geolocation not supported by your browser');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      function(pos) {
+        setLocation(pos.coords.latitude, pos.coords.longitude);
+        btn.querySelector('div').textContent = 'Location Set!';
+        btn.style.borderColor = 'var(--accent-emerald)';
+      },
+      function() {
+        alert('Location access denied. Please try another option.');
+        btn.querySelector('div').textContent = 'Use My Location';
+        btn.style.borderColor = 'var(--border-color)';
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  // Option 2: Drop Pin on Map
+  window.showMapPicker = function() {
+    const section = document.getElementById('map-picker-section');
+    section.style.display = 'block';
+    document.getElementById('loc-option-map').style.borderColor = 'var(--primary)';
+
+    if (!locMap) {
+      locMap = L.map('location-map').setView([25.6, 85.1], 7);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OSM'
+      }).addTo(locMap);
+
+      locMap.on('click', function(e) {
+        if (locMarker) locMap.removeLayer(locMarker);
+        locMarker = L.marker(e.latlng, { draggable: true }).addTo(locMap);
+        setLocation(e.latlng.lat, e.latlng.lng);
+
+        locMarker.on('dragend', function() {
+          const pos = locMarker.getLatLng();
+          setLocation(pos.lat, pos.lng);
+        });
+      });
+    }
+    setTimeout(function() { locMap.invalidateSize(); }, 200);
+  };
+
+  // Option 3: Paste Google Maps Link
+  window.showLinkInput = function() {
+    document.getElementById('gmaps-link-section').style.display = 'block';
+    document.getElementById('loc-option-link').style.borderColor = 'var(--primary)';
+    document.getElementById('gmaps-link').focus();
+  };
+
+  window.extractFromLink = function() {
+    const link = document.getElementById('gmaps-link').value.trim();
+    if (!link) { alert('Please paste a Google Maps link'); return; }
+
+    // Try multiple patterns
+    let lat, lng;
+
+    // Pattern: @25.123,85.456
+    let m = link.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+    if (m) { lat = parseFloat(m[1]); lng = parseFloat(m[2]); }
+
+    // Pattern: ?q=25.123,85.456
+    if (!lat) {
+      m = link.match(/[?&]q=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+      if (m) { lat = parseFloat(m[1]); lng = parseFloat(m[2]); }
+    }
+
+    // Pattern: /place/.../@25.123,85.456
+    if (!lat) {
+      m = link.match(/\/(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+      if (m) { lat = parseFloat(m[1]); lng = parseFloat(m[2]); }
+    }
+
+    // Pattern: ll=25.123,85.456
+    if (!lat) {
+      m = link.match(/ll=(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+      if (m) { lat = parseFloat(m[1]); lng = parseFloat(m[2]); }
+    }
+
+    if (lat && lng && lat > -90 && lat < 90 && lng > -180 && lng < 180) {
+      setLocation(lat, lng);
+      document.getElementById('loc-option-link').style.borderColor = 'var(--accent-emerald)';
+    } else {
+      alert('Could not extract coordinates from this link. Try copying the full URL from Google Maps address bar.');
+    }
+  };
+
+})();
+</script>
+{% endblock %}

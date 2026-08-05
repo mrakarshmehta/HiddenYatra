@@ -1,0 +1,1042 @@
+{% extends "base.html" %}
+{% block title %}{{ place.name }} — {{ app_name }}{% endblock %}
+{% block meta_desc %}{{ place.description | truncate_words(30) }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav class="breadcrumb" style="padding-top:var(--space-lg);">
+  <a href="{{ url_for('main.index') }}">🏠 Home</a>
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:0.4;"><polyline points="9 18 15 12 9 6"/></svg>
+  <a href="{{ url_for('main.state_detail', slug=place.state_slug) }}">{{ place.state_name }}</a>
+  {% if place.district_name %}
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:0.4;"><polyline points="9 18 15 12 9 6"/></svg>
+  <span>{{ place.district_name }}</span>
+  {% endif %}
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:0.4;"><polyline points="9 18 15 12 9 6"/></svg>
+  <span style="color:var(--primary);font-weight:600;">{{ place.name }}</span>
+</nav>
+
+<!-- ═══ PLACE HERO ═══ -->
+<section class="place-hero" id="place-hero">
+  {% if photos and photos|length > 0 %}
+  <!-- Multiple image slider -->
+  {% set hero_images = [] %}
+  {% if place.cover_image %}{% if hero_images.append(place.cover_image) %}{% endif %}{% endif %}
+  {% for p in photos[:5] %}
+    {% if p.filename != place.cover_image %}{% if hero_images.append(p.filename) %}{% endif %}{% endif %}
+  {% endfor %}
+  {% for hi in hero_images %}
+  <img class="place-hero-img {% if loop.first %}active{% endif %}" data-slide="{{ loop.index0 }}"
+       src="{% if hi.startswith('http') %}{{ hi }}{% else %}{{ url_for('static', filename='uploads/places/' + hi) }}{% endif %}" alt="{{ place.name }}"
+       style="{% if not loop.first %}opacity:0;{% endif %}transition:opacity 1s ease;" onerror="this.onerror=null;this.src='/static/placeholder-place.svg';">
+  {% endfor %}
+  {% elif place.cover_image %}
+  <img class="place-hero-img active" src="{% if place.cover_image.startswith('http') %}{{ place.cover_image }}{% else %}{{ url_for('static', filename='uploads/places/' + place.cover_image) }}{% endif %}" alt="{{ place.name }}" onerror="this.onerror=null;this.src='/static/placeholder-place.svg';">
+  {% endif %}
+  <div class="place-hero-overlay"></div>
+  <div class="place-hero-content">
+    <span class="place-badge">{{ place.category | category_label }}</span>
+    {% if place.is_hidden_gem %}<span class="place-badge" style="background:rgba(139,92,246,0.2);border-color:rgba(139,92,246,0.4);color:#A78BFA;">💎 Hidden Gem</span>{% endif %}
+    {% if place.is_featured %}<span class="place-badge" style="background:rgba(245,158,11,0.2);border-color:rgba(245,158,11,0.4);color:var(--accent-amber);">⭐ Featured</span>{% endif %}
+    <h1 class="place-hero-title">{{ place.name }}</h1>
+    <p class="place-hero-location">
+      📍 {{ place.state_name }}{% if place.district_name %}, {{ place.district_name }}{% endif %}{% if place.block_name %}, {{ place.block_name }}{% endif %}
+    </p>
+    {% if rating_info and rating_info.review_count > 0 %}
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:6px;">
+      <div style="display:flex;align-items:center;gap:4px;">
+        {% for i in range(5) %}
+        <span style="color:{% if i < (rating_info.avg_rating | round) %}#FBBF24{% else %}rgba(255,255,255,0.3){% endif %};font-size:1rem;">★</span>
+        {% endfor %}
+        <span style="font-weight:700;color:white;margin-left:4px;">{{ "%.1f" | format(rating_info.avg_rating) }}/5</span>
+      </div>
+      <span style="font-size:0.82rem;color:rgba(255,255,255,0.7);">({{ rating_info.review_count }} reviews)</span>
+      <span style="font-size:0.82rem;color:rgba(255,255,255,0.5);">👁️ {{ place_stats.views }} views</span>
+      {% if place_stats.saves > 0 %}<span style="font-size:0.82rem;color:rgba(255,255,255,0.5);">❤️ {{ place_stats.saves }} saves</span>{% endif %}
+    </div>
+    {% endif %}
+    <div class="place-hero-actions">
+      <button class="btn-action-pill" id="wishlist-toggle" onclick="toggleWishlist({{ place.id }})">
+        <span id="wishlist-icon">🤍</span> <span id="wishlist-text">Save</span>
+      </button>
+      <button class="btn-action-pill" id="visited-toggle" onclick="toggleVisited({{ place.id }})">
+        <span id="visited-icon">☐</span> <span id="visited-text">Mark Visited</span>
+      </button>
+      <div class="share-dropdown" id="share-dropdown">
+        <button class="btn-action-pill" onclick="document.getElementById('share-dropdown').classList.toggle('open')">
+          📤 Share
+        </button>
+        <div class="share-menu">
+          <button class="share-menu-item" onclick="copyLink()">🔗 Copy Link</button>
+          <a class="share-menu-item" href="https://wa.me/?text={{ place.name }}%20-%20{{ request.url }}" target="_blank">💬 WhatsApp</a>
+          <a class="share-menu-item" href="https://twitter.com/intent/tweet?text=Check out {{ place.name }} on HiddenYatra!&url={{ request.url }}" target="_blank">🐦 Twitter</a>
+        </div>
+      </div>
+      {% if session.get('admin_logged_in') %}
+      <a href="{{ url_for('admin.edit_place_view', place_id=place.id) }}" class="btn-action-pill btn-action-admin">✏️ Edit</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<!-- ═══ STATS BAR ═══ -->
+<div class="place-stats-bar">
+  <div class="place-stat-item">
+    <span class="place-stat-icon">👁️</span>
+    <span class="place-stat-value">{{ place_stats.views }}</span>
+    <span class="place-stat-label">Views</span>
+  </div>
+  <div class="place-stat-item">
+    <span class="place-stat-icon">❤️</span>
+    <span class="place-stat-value">{{ place_stats.saves }}</span>
+    <span class="place-stat-label">Saved</span>
+  </div>
+  <div class="place-stat-item">
+    <span class="place-stat-icon">⭐</span>
+    <span class="place-stat-value">{{ "%.1f" | format(place_stats.rating) if place_stats.rating else '—' }}</span>
+    <span class="place-stat-label">Rating</span>
+  </div>
+  <div class="place-stat-item">
+    <span class="place-stat-icon">📸</span>
+    <span class="place-stat-value">{{ place_stats.photos }}</span>
+    <span class="place-stat-label">Photos</span>
+  </div>
+  <div class="place-stat-item">
+    <span class="place-stat-icon">💬</span>
+    <span class="place-stat-value">{{ place_stats.reviews }}</span>
+    <span class="place-stat-label">Reviews</span>
+  </div>
+</div>
+
+<!-- ═══ DETAILS LAYOUT ═══ -->
+<div class="place-layout">
+
+  <!-- Main Column -->
+  <div class="place-main">
+
+    <!-- Quick Info Boxes -->
+    {% if place.best_time_to_visit or place.entry_fee or place.best_season or place.crowd_level or place.parking_info %}
+    <div class="content-card">
+      <h2 class="content-card-title">📋 Essential Info</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--space-sm);">
+        {% if place.best_time_to_visit %}
+        <div class="info-box">
+          <div class="info-box-label">🗓️ Best Time to Visit</div>
+          <div class="info-box-value">{{ place.best_time_to_visit }}</div>
+        </div>
+        {% endif %}
+        {% if place.best_season %}
+        <div class="info-box">
+          <div class="info-box-label">🌤️ Best Season</div>
+          <div class="info-box-value">{{ place.best_season }}</div>
+        </div>
+        {% endif %}
+        {% if place.best_time_of_day %}
+        <div class="info-box">
+          <div class="info-box-label">🕐 Recommended Time</div>
+          <div class="info-box-value">{{ place.best_time_of_day }}</div>
+        </div>
+        {% endif %}
+        {% if place.entry_fee %}
+        <div class="info-box">
+          <div class="info-box-label">🎫 Entry Fee</div>
+          <div class="info-box-value">{{ place.entry_fee }}</div>
+        </div>
+        {% endif %}
+        {% if place.crowd_level %}
+        <div class="info-box">
+          <div class="info-box-label">👥 Crowd Level</div>
+          <div class="info-box-value">{{ place.crowd_level }}</div>
+        </div>
+        {% endif %}
+        {% if place.parking_info %}
+        <div class="info-box">
+          <div class="info-box-label">🅿️ Parking</div>
+          <div class="info-box-value">{{ place.parking_info }}</div>
+        </div>
+        {% endif %}
+        {% if place.family_friendly is not none %}
+        <div class="info-box">
+          <div class="info-box-label">👨‍👩‍👧 Family Friendly</div>
+          <div class="info-box-value">{% if place.family_friendly %}Yes ✅{% else %}Not recommended{% endif %}</div>
+        </div>
+        {% endif %}
+        <div class="info-box">
+          <div class="info-box-label">🚻 Washroom</div>
+          <div class="info-box-value">Clean facilities available on site</div>
+        </div>
+        <div class="info-box">
+          <div class="info-box-label">♿ Accessibility</div>
+          <div class="info-box-value">{% if place.family_friendly %}Wheelchair accessible paths{% else %}Standard access{% endif %}</div>
+        </div>
+      </div>
+      {% if place.travel_tips %}
+      <div class="info-box" style="margin-top:var(--space-sm);">
+        <div class="info-box-label">💡 Travel Tips</div>
+        <div class="info-box-value">{{ place.travel_tips }}</div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Description -->
+    <div class="content-card">
+      <h2 class="content-card-title">About This Place</h2>
+      <p class="place-description">{{ place.description }}</p>
+    </div>
+
+    <!-- History -->
+    {% if place.history %}
+    <div class="content-card">
+      <h2 class="content-card-title">📖 History & Heritage</h2>
+      <p class="place-description">{{ place.history }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Local Tips -->
+    {% if place.local_tips or place.safety_tips %}
+    <div class="content-card" style="border-left:3px solid var(--primary);">
+      <h2 class="content-card-title">🧭 Local Tips — Like a Friend Guiding You</h2>
+      {% if place.local_tips %}
+      <ul style="list-style:none;padding:0;margin:0;">
+        {% for tip in place.local_tips.split('|') %}
+        {% if tip.strip() %}
+        <li style="padding:8px 0;border-bottom:1px solid var(--border-light);font-size:0.9rem;display:flex;align-items:flex-start;gap:8px;">
+          <span style="color:var(--primary);font-weight:600;">💡</span>
+          <span>{{ tip.strip() }}</span>
+        </li>
+        {% endif %}
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% if place.safety_tips %}
+      <div style="margin-top:var(--space-md);padding:var(--space-md);background:rgba(244,63,94,0.05);border-radius:var(--radius-md);border:1px solid rgba(244,63,94,0.1);">
+        <div style="font-weight:600;font-size:0.85rem;color:var(--accent-rose);margin-bottom:4px;">⚠️ Safety Tips</div>
+        <div style="font-size:0.85rem;color:var(--text-secondary);">{{ place.safety_tips }}</div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Frequently Asked Questions (FAQ) Accordion -->
+    <div class="content-card" id="place-faq">
+      <h2 class="content-card-title">❓ Frequently Asked Questions</h2>
+      <div class="faq-accordion" style="display:flex;flex-direction:column;gap:12px;margin-top:var(--space-md);">
+        <details class="faq-item" style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:14px 18px;cursor:pointer;">
+          <summary style="font-weight:600;font-size:0.95rem;color:var(--text-primary);user-select:none;outline:none;">
+            What is the best time of year to visit {{ place.name }}?
+          </summary>
+          <p style="font-size:0.88rem;color:var(--text-secondary);margin-top:10px;line-height:1.6;">
+            The best time to visit {{ place.name }} is during <strong>{{ place.best_season or place.best_time_to_visit or 'October to March' }}</strong> when weather conditions across Bihar are ideal for sightseeing.
+          </p>
+        </details>
+
+        <details class="faq-item" style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:14px 18px;cursor:pointer;">
+          <summary style="font-weight:600;font-size:0.95rem;color:var(--text-primary);user-select:none;outline:none;">
+            Is there an entry fee or ticket required for {{ place.name }}?
+          </summary>
+          <p style="font-size:0.88rem;color:var(--text-secondary);margin-top:10px;line-height:1.6;">
+            Entry fee details: <strong>{{ place.entry_fee or 'Free entry / Nominal ticket fee on spot' }}</strong>.
+          </p>
+        </details>
+
+        <details class="faq-item" style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:14px 18px;cursor:pointer;">
+          <summary style="font-weight:600;font-size:0.95rem;color:var(--text-primary);user-select:none;outline:none;">
+            Is {{ place.name }} suitable for families and children?
+          </summary>
+          <p style="font-size:0.88rem;color:var(--text-secondary);margin-top:10px;line-height:1.6;">
+            {% if place.family_friendly %}
+            Yes, {{ place.name }} is family-friendly with clean walking paths, parking space, and safe surroundings for children and seniors.
+            {% else %}
+            Yes, {{ place.name }} is open for visitors of all age groups. Comfortable footwear and water bottles are recommended.
+            {% endif %}
+          </p>
+        </details>
+
+        <details class="faq-item" style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:14px 18px;cursor:pointer;">
+          <summary style="font-weight:600;font-size:0.95rem;color:var(--text-primary);user-select:none;outline:none;">
+            Is parking and washroom facility available at {{ place.name }}?
+          </summary>
+          <p style="font-size:0.88rem;color:var(--text-secondary);margin-top:10px;line-height:1.6;">
+            Parking: {{ place.parking_info or 'Parking space available near entry.' }} Washrooms are accessible for visitors on site.
+          </p>
+        </details>
+      </div>
+    </div>
+
+    <!-- Photo Gallery -->
+    {% if photos %}
+    <div class="content-card">
+      <h2 class="content-card-title">📸 Photo Gallery</h2>
+      <div class="gallery-grid" id="gallery">
+        {% for photo in photos %}
+        <div class="gallery-item" data-index="{{ loop.index0 }}">
+          <img src="{{ url_for('static', filename='uploads/places/' + photo.filename) }}"
+               alt="{{ photo.caption or place.name }}" loading="lazy" onerror="this.onerror=null;this.src='/static/placeholder-place.svg';">
+          {% if photo.caption %}
+          <span class="gallery-caption">{{ photo.caption }}</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ═══ VISITOR GALLERY ═══ -->
+    <div class="content-card">
+      <h2 class="content-card-title">📸 Visitor Gallery
+        {% if user_photos %}<span style="font-weight:400;color:var(--text-muted);font-size:0.82rem;margin-left:6px;">{{ user_photos | length }} photo{{ 's' if user_photos | length != 1 }}</span>{% endif %}
+      </h2>
+
+      {% if user_photos %}
+      <div class="gallery-grid" style="margin-bottom:var(--space-lg);">
+        {% for up in user_photos %}
+        <div class="gallery-item" data-index="{{ loop.index0 + (photos | length) }}">
+          <img src="{{ url_for('static', filename='uploads/places/' + up.filename) }}"
+               alt="{{ up.caption or place.name }}" loading="lazy" onerror="this.onerror=null;this.src='/static/placeholder-place.svg';">
+          <span class="gallery-caption">📷 {{ up.uploader_name }} • {{ up.created_at.strftime('%Y-%m-%d') if up.created_at else '' }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p style="color:var(--text-muted);font-size:0.88rem;margin-bottom:var(--space-lg);">No visitor photos yet. Be the first to share your experience!</p>
+      {% endif %}
+
+      <!-- Upload Your Photos -->
+      <div style="border-top:1px solid var(--border-light);padding-top:var(--space-lg);">
+        <h3 style="font-family:var(--font-heading);font-size:1rem;font-weight:600;margin-bottom:var(--space-md);">📤 Upload Your Photos</h3>
+        <form action="{{ url_for('user_photos.upload_user_photo', place_id=place.id) }}" method="POST" enctype="multipart/form-data">
+{{ csrf_input() }}
+          <div style="display:flex;gap:var(--space-sm);flex-wrap:wrap;margin-bottom:var(--space-md);">
+            <input type="text" name="uploader_name" class="form-input" placeholder="Your Name" style="flex:1;min-width:150px;" maxlength="50">
+            <input type="text" name="caption" class="form-input" placeholder="Caption (optional)" style="flex:2;min-width:150px;" maxlength="100">
+          </div>
+          <div class="user-upload-zone" id="user-upload-zone" onclick="document.getElementById('user-photo-input').click()">
+            <div id="user-upload-content">
+              <span style="font-size:2rem;">📸</span>
+              <p style="font-weight:600;font-size:0.9rem;">Click to select photos or drag & drop</p>
+              <p style="font-size:0.75rem;color:var(--text-muted);">JPG, PNG, WebP • Max 16MB each • Multiple images allowed</p>
+            </div>
+            <div id="user-upload-preview" style="display:none;">
+              <div id="user-preview-grid" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;"></div>
+              <p id="user-preview-count" style="font-size:0.82rem;color:var(--text-secondary);margin-top:8px;font-weight:500;"></p>
+            </div>
+            <input type="file" name="user_photos" id="user-photo-input" accept="image/*" multiple style="display:none;">
+          </div>
+          <div id="user-upload-actions" style="display:none;margin-top:var(--space-md);">
+            <button type="submit" class="btn btn-saffron">📤 Upload Photos</button>
+            <span style="font-size:0.78rem;color:var(--text-muted);margin-left:var(--space-sm);">Photos will be visible after admin approval</span>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Famous Food & Specialties -->
+    {% if specialties %}
+    <div class="content-card">
+      <h2 class="content-card-title">🍛 Famous Local Specialties</h2>
+      <div class="specialties-list">
+        {% for spec in specialties %}
+        <div class="specialty-card" id="specialty-{{ loop.index0 }}" data-lat="{{ spec.latitude or '' }}" data-lng="{{ spec.longitude or '' }}">
+          <div class="specialty-header">
+            <h3 class="specialty-name">{{ spec.name }}</h3>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+              <span class="specialty-badge">{{ spec.category }}</span>
+              {% if spec.latitude and spec.longitude %}
+              <button class="btn-map-pin" onclick="focusMapMarker('food', {{ loop.index0 }})">📍 Show on Map</button>
+              {% elif spec.where_to_find %}
+              <a href="https://www.google.com/maps/search/{{ spec.where_to_find | urlencode }}+{{ place.state_name | urlencode }}" target="_blank" class="btn-map-pin">📍 Find on Map</a>
+              {% endif %}
+            </div>
+          </div>
+          {% if spec.description %}
+          <p class="specialty-desc">{{ spec.description }}</p>
+          {% endif %}
+          <div class="specialty-meta">
+            {% if spec.where_to_find %}
+            <span>📍 {{ spec.where_to_find }}</span>
+            {% endif %}
+            {% if spec.distance_km %}
+            <span>🚗 {{ spec.distance_km }} km away</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Accommodations / Where to Stay -->
+    {% if accommodations %}
+    <div class="content-card">
+      <h2 class="content-card-title">🏨 Where to Stay</h2>
+      <div class="accommodations-list">
+        {% for acc in accommodations %}
+        <div class="accommodation-card" id="accommodation-{{ loop.index0 }}" data-lat="{{ acc.latitude or '' }}" data-lng="{{ acc.longitude or '' }}">
+          <div class="accommodation-header">
+            <div class="accommodation-name-row">
+              <h3 class="accommodation-name">{{ acc.name }}</h3>
+              <span class="accommodation-type-badge">
+                {% if acc.type == 'hotel' %}🏨{% elif acc.type == 'resort' %}🏖️{% elif acc.type == 'guesthouse' %}🏠{% elif acc.type == 'hostel' %}🛏️{% elif acc.type == 'homestay' %}🏡{% elif acc.type == 'dharamshala' %}🛕{% elif acc.type == 'lodge' %}🏢{% else %}🚗{% endif %}
+                {{ acc.type | title }}
+              </span>
+            </div>
+            {% if acc.price_range %}
+            <span class="accommodation-price">💰 {{ acc.price_range }}</span>
+            {% endif %}
+          </div>
+          {% if acc.description %}
+          <p class="accommodation-desc">{{ acc.description }}</p>
+          {% endif %}
+          <div class="accommodation-meta">
+            {% if acc.address %}
+            <span class="accommodation-meta-item">📍 {{ acc.address }}</span>
+            {% endif %}
+            {% if acc.distance_km %}
+            <span class="accommodation-meta-item">🚗 {{ acc.distance_km }} km from site</span>
+            {% endif %}
+            {% if acc.phone %}
+            <span class="accommodation-meta-item">📞 {{ acc.phone }}</span>
+            {% endif %}
+          </div>
+          <div class="accommodation-actions">
+            {% if acc.latitude and acc.longitude %}
+            <button class="btn-map-pin" onclick="focusMapMarker('hotel', {{ loop.index0 }})">📍 Show on Map</button>
+            <a href="https://www.google.com/maps?q={{ acc.latitude }},{{ acc.longitude }}" target="_blank" class="btn btn-outline btn-sm">🗺️ Directions</a>
+            {% else %}
+            <a href="https://www.google.com/maps/search/{{ acc.name | urlencode }}+{{ place.state_name | urlencode }}" target="_blank" class="btn-map-pin">📍 Find on Map</a>
+            {% endif %}
+            {% if acc.website %}
+            <a href="{{ acc.website }}" target="_blank" class="btn btn-outline btn-sm">🌐 Website</a>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ═══ NEARBY ESSENTIALS (10 Essential Facilities) ═══ -->
+    {% if ten_nearby_essentials %}
+    <div class="content-card" id="place-nearby-essentials">
+      <h2 class="content-card-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>🧭 Nearby Essentials</span>
+        <span style="font-size:0.75rem;font-weight:600;padding:3px 10px;border-radius:20px;background:rgba(0,191,166,0.15);color:var(--secondary,#00BFA6);">10 Essential Facilities</span>
+      </h2>
+      <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:var(--space-md);">
+        Nearest essential services around {{ place.name }} sorted by distance with walking & driving travel times.
+      </p>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:12px;">
+        {% for item in ten_nearby_essentials %}
+        <div style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-lg);padding:14px;display:flex;flex-direction:column;justify-content:space-between;gap:8px;">
+          <div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px;">
+              <span style="font-size:0.75rem;font-weight:700;padding:2px 8px;border-radius:6px;background:rgba(99,102,241,0.15);color:#818cf8;">
+                {{ item.icon }} {{ item.category_label }}
+              </span>
+              <span style="font-size:0.75rem;font-weight:700;color:var(--secondary,#00BFA6);">📍 {{ item.distance_formatted }}</span>
+            </div>
+            <h4 style="font-size:0.95rem;font-weight:700;color:var(--text-primary);margin:4px 0 2px;line-height:1.3;">{{ item.name }}</h4>
+            <div style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">📍 {{ item.address }}</div>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06);font-size:0.75rem;color:var(--text-secondary);">
+            <span>🚶 {{ item.travel_summary }}</span>
+            <a href="{{ item.directions_url }}" target="_blank" class="btn btn-outline btn-sm" style="padding:4px 10px;font-size:0.72rem;border-radius:8px;text-decoration:none;">
+              🧭 Directions
+            </a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Nearby Places -->
+    {% if nearby %}
+    <div class="content-card">
+      <h2 class="content-card-title">🧭 If You're Here, Don't Miss...</h2>
+      <div class="nearby-grid-v2">
+        {% for np in nearby %}
+        <a href="{{ url_for('places.place_detail', slug=np.slug) }}" class="nearby-card-v2" {% if np.latitude and np.longitude %}data-lat="{{ np.latitude }}" data-lng="{{ np.longitude }}"{% endif %}>
+          <div class="nearby-card-img">
+            {% if np.cover_image %}
+            <img src="{% if np.cover_image.startswith('http') %}{{ np.cover_image }}{% else %}{{ url_for('static', filename='uploads/places/' + np.cover_image) }}{% endif %}" alt="{{ np.name }}" loading="lazy" onerror="this.onerror=null;this.src='/static/placeholder-place.svg';">
+            {% else %}
+            <div class="nearby-card-placeholder">
+              {% if np.category == 'temple' %}🛕{% elif np.category == 'waterfall' %}💧{% elif np.category == 'historical' %}🏛️{% elif np.category == 'nature' %}🌿{% elif np.category == 'lake' %}🌊{% else %}📍{% endif %}
+            </div>
+            {% endif %}
+            <span class="nearby-card-badge">{{ np.category | category_label }}</span>
+            {% if np.distance_km %}
+            <span class="nearby-card-badge" style="left:auto;right:8px;background:rgba(0,0,0,0.7);color:#00BFA6;">{{ np.distance_km }} km</span>
+            {% endif %}
+          </div>
+          <div class="nearby-card-body">
+            <h4 class="nearby-card-name">{{ np.name }}</h4>
+            <span class="nearby-card-meta">📍 {{ np.district_name or np.state_name }}{% if np.distance_km %} · {{ np.distance_km }} km away{% endif %}</span>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Reviews -->
+    <div class="content-card">
+      <h2 class="content-card-title">⭐ Reviews {% if rating_info and rating_info.review_count > 0 %}<span style="font-weight:400;color:var(--text-muted);font-size:0.85rem;">{{ rating_info.avg_rating }}/5 ({{ rating_info.review_count }} reviews)</span>{% endif %}</h2>
+
+      {% if reviews %}
+      <div class="reviews-list">
+        {% for review in reviews %}
+        <div class="review-card">
+          <div class="review-header">
+            <div class="review-author">
+              <div class="review-avatar">{{ review.author_name[0] | upper }}</div>
+              <div>
+                <div class="review-author-name">{{ review.author_name }}</div>
+                <div class="review-date">{{ review.created_at.strftime('%Y-%m-%d') if review.created_at else '' }}</div>
+              </div>
+            </div>
+            <div class="star-rating">
+              {% for i in range(5) %}
+              <span class="star {% if i < review.rating %}filled{% endif %}">★</span>
+              {% endfor %}
+            </div>
+          </div>
+          {% if review.comment %}
+          <p class="review-text">{{ review.comment }}</p>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p style="color:var(--text-muted);font-size:0.9rem;">No reviews yet. Be the first!</p>
+      {% endif %}
+
+      <!-- Review form -->
+      <div class="review-form">
+        <h3>Leave a Review</h3>
+        <form action="{{ url_for('reviews.submit_review', place_id=place.id) }}" method="POST">
+{{ csrf_input() }}
+          <div class="form-group">
+            <label>Your Name</label>
+            <input type="text" name="author_name" placeholder="Your name" class="form-input" maxlength="50">
+          </div>
+          <div class="form-group">
+            <label>Rating</label>
+            <div class="star-rating-input" id="star-input">
+              {% for i in range(1, 6) %}
+              <span class="star" data-value="{{ i }}" onclick="setRating({{ i }})">★</span>
+              {% endfor %}
+            </div>
+            <input type="hidden" name="rating" id="rating-value" value="5">
+          </div>
+          <div class="form-group">
+            <label>Your Review</label>
+            <textarea name="comment" placeholder="Share your experience..." class="form-textarea" rows="3"></textarea>
+          </div>
+          <button type="submit" class="btn btn-saffron">Submit Review</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div class="place-sidebar">
+    <!-- Map Widget -->
+    {% if place.latitude and place.longitude %}
+    <div class="content-card">
+      <h3 class="content-card-title">🗺️ Location</h3>
+      <div id="place-map" class="place-map"
+           data-lat="{{ place.latitude }}"
+           data-lng="{{ place.longitude }}"
+           data-name="{{ place.name }}"
+           {% if accommodations %}data-hotels='{{ accommodations | tojson }}'{% endif %}
+           {% if specialties %}data-foods='{{ specialties | tojson }}'{% endif %}></div>
+      <!-- Map Legend -->
+      <div class="map-legend">
+        <div class="map-legend-item"><span class="map-legend-dot dot-place"></span> Place</div>
+        {% if accommodations %}<div class="map-legend-item"><span class="map-legend-dot dot-hotel"></span> Hotels</div>{% endif %}
+        {% if specialties %}<div class="map-legend-item"><span class="map-legend-dot dot-food"></span> Food</div>{% endif %}
+      </div>
+      <div class="map-actions">
+        {% if place.maps_link %}
+        <a href="{{ place.maps_link }}" target="_blank" class="btn btn-outline btn-sm">Open in Google Maps</a>
+        {% else %}
+        <a href="https://www.google.com/maps?q={{ place.latitude }},{{ place.longitude }}" target="_blank" class="btn btn-outline btn-sm">Get Directions</a>
+        {% endif %}
+      </div>
+      <p class="distance-text" id="distance-text"></p>
+    </div>
+    {% endif %}
+
+    <!-- Quick Facts -->
+    <div class="content-card">
+      <h3 class="content-card-title">📋 Quick Info</h3>
+      <div class="fact-list">
+        <div class="fact-row">
+          <span class="fact-label">State</span>
+          <span class="fact-value">{{ place.state_name }}</span>
+        </div>
+        {% if place.district_name %}
+        <div class="fact-row">
+          <span class="fact-label">District</span>
+          <span class="fact-value">{{ place.district_name }}</span>
+        </div>
+        {% endif %}
+        {% if place.block_name %}
+        <div class="fact-row">
+          <span class="fact-label">Block</span>
+          <span class="fact-value">{{ place.block_name }}</span>
+        </div>
+        {% endif %}
+        <div class="fact-row">
+          <span class="fact-label">Category</span>
+          <span class="fact-value">{{ place.category | category_label }}</span>
+        </div>
+        {% if photos %}
+        <div class="fact-row">
+          <span class="fact-label">Photos</span>
+          <span class="fact-value">{{ photos | length }}</span>
+        </div>
+        {% endif %}
+        {% if specialties %}
+        <div class="fact-row">
+          <span class="fact-label">Specialties</span>
+          <span class="fact-value">{{ specialties | length }}</span>
+        </div>
+        {% endif %}
+        {% if accommodations %}
+        <div class="fact-row">
+          <span class="fact-label">Hotels Nearby</span>
+          <span class="fact-value">{{ accommodations | length }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- How to Reach -->
+    {% if place.nearest_railway or place.nearest_bus_stand or place.nearest_airport or place.road_connectivity %}
+    <div class="content-card">
+      <h3 class="content-card-title">🚗 How to Reach</h3>
+      <div class="fact-list">
+        {% if place.nearest_railway %}
+        <div class="fact-row">
+          <span class="fact-label">🚂 Railway</span>
+          <span class="fact-value">{{ place.nearest_railway }}</span>
+        </div>
+        {% endif %}
+        {% if place.nearest_bus_stand %}
+        <div class="fact-row">
+          <span class="fact-label">🚌 Bus Stand</span>
+          <span class="fact-value">{{ place.nearest_bus_stand }}</span>
+        </div>
+        {% endif %}
+        {% if place.nearest_airport %}
+        <div class="fact-row">
+          <span class="fact-label">✈️ Airport</span>
+          <span class="fact-value">{{ place.nearest_airport }}</span>
+        </div>
+        {% endif %}
+        {% if place.road_connectivity %}
+        <div class="fact-row">
+          <span class="fact-label">🛣️ By Road</span>
+          <span class="fact-value">{{ place.road_connectivity }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Nearby Facilities (grouped) -->
+    {% if nearby_services_grouped %}
+    <div class="content-card">
+      <h3 class="content-card-title">📍 Nearby Facilities</h3>
+      {% for group_name, group_services in nearby_services_grouped.items() %}
+      <div class="hy-facility-group">
+        <div class="hy-facility-group-header">{{ group_name }}</div>
+        {% for svc in group_services %}
+        <div class="hy-facility-item" data-lat="{{ svc.latitude or '' }}" data-lng="{{ svc.longitude or '' }}">
+          <span class="hy-facility-icon">{{ svc.icon }}</span>
+          <div class="hy-facility-info">
+            <div class="hy-facility-name">{{ svc.name }}</div>
+            {% if svc.address %}<div class="hy-facility-addr">{{ svc.address[:45] }}</div>{% endif %}
+            <div class="hy-facility-dist" style="font-size:0.7rem;color:var(--text-muted);"></div>
+          </div>
+          <div class="hy-facility-actions">
+            {% if svc.phone %}
+            <a href="tel:{{ svc.phone }}" class="hy-facility-btn" title="Call">📞</a>
+            {% endif %}
+            {% if svc.latitude and svc.longitude %}
+            <a href="https://www.google.com/maps/dir/?api=1&destination={{ svc.latitude }},{{ svc.longitude }}" target="_blank" class="hy-facility-btn" title="Directions">🗺️</a>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Distance from You + Directions -->
+    {% if place.latitude and place.longitude %}
+    <div class="content-card" id="hy-distance-card" style="display:none;">
+      <h3 class="content-card-title">📍 Distance from You</h3>
+      <div class="hy-distance-body">
+        <div id="hy-user-distance" class="hy-distance-value"></div>
+        <div class="hy-distance-label">from your location</div>
+        <div id="hy-travel-time" class="hy-travel-time"></div>
+        <div class="hy-directions-row">
+          <a href="https://www.google.com/maps/dir/?api=1&destination={{ place.latitude }},{{ place.longitude }}" target="_blank" class="btn btn-primary btn-sm" id="hy-dir-btn">🧭 Get Directions</a>
+          {% if place.maps_link %}
+          <a href="{{ place.maps_link }}" target="_blank" class="btn btn-outline btn-sm">🗺️ Open in Maps</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- ═══ BEST TIME & TIPS ═══ -->
+<div class="place-tips-section" style="max-width:900px;margin:var(--space-2xl) auto 0;padding:0 var(--space-lg);">
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--space-lg);">
+
+    <!-- Best Time to Visit -->
+    <div class="content-card" style="padding:var(--space-lg);">
+      <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:var(--space-md);display:flex;align-items:center;gap:8px;">
+        🗓️ Best Time to Visit
+      </h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:var(--space-md);">
+        {% set cat = place.category or 'tourist_spot' %}
+        {% if cat in ['temple','religious'] %}
+        <span style="padding:6px 14px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);border-radius:20px;font-size:.82rem;font-weight:600;color:#22c55e;">Oct - Mar</span>
+        <span style="font-size:.82rem;color:var(--text-muted);">Winter season is ideal for temple visits</span>
+        {% elif cat in ['nature','waterfall'] %}
+        <span style="padding:6px 14px;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.25);border-radius:20px;font-size:.82rem;font-weight:600;color:#3b82f6;">Jul - Sep</span>
+        <span style="font-size:.82rem;color:var(--text-muted);">Monsoon brings lush greenery and full waterfalls</span>
+        {% elif cat in ['historical','fort'] %}
+        <span style="padding:6px 14px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:20px;font-size:.82rem;font-weight:600;color:#f59e0b;">Nov - Feb</span>
+        <span style="font-size:.82rem;color:var(--text-muted);">Cool weather perfect for exploring historical sites</span>
+        {% else %}
+        <span style="padding:6px 14px;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.25);border-radius:20px;font-size:.82rem;font-weight:600;color:#6366f1;">Oct - Mar</span>
+        <span style="font-size:.82rem;color:var(--text-muted);">Pleasant weather for sightseeing</span>
+        {% endif %}
+      </div>
+      <div style="font-size:.8rem;color:var(--text-muted);line-height:1.6;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">🌡️ Summer (Apr-Jun): 30-45°C — Hot, carry water</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">🌧️ Monsoon (Jul-Sep): 25-35°C — Rainy, carry umbrella</div>
+        <div style="display:flex;align-items:center;gap:6px;">❄️ Winter (Oct-Mar): 5-25°C — Ideal for tourism</div>
+      </div>
+    </div>
+
+    <!-- Travel Tips -->
+    <div class="content-card" style="padding:var(--space-lg);">
+      <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:var(--space-md);display:flex;align-items:center;gap:8px;">
+        💡 Travel Tips
+      </h3>
+      <div style="font-size:.85rem;color:var(--text-secondary);line-height:1.8;">
+        {% if cat in ['temple','religious'] %}
+        <div>🔹 Dress modestly — cover shoulders and knees</div>
+        <div>🔹 Remove shoes before entering the temple premises</div>
+        <div>🔹 Photography may be restricted inside — check signage</div>
+        <div>🔹 Visit early morning to avoid crowds</div>
+        <div>🔹 Carry small change for donations and offerings</div>
+        {% elif cat in ['nature','waterfall','park'] %}
+        <div>🔹 Wear comfortable trekking shoes</div>
+        <div>🔹 Carry drinking water and light snacks</div>
+        <div>🔹 Don't litter — keep the environment clean</div>
+        <div>🔹 Start early to enjoy the best weather</div>
+        <div>🔹 Carry insect repellent during monsoon</div>
+        {% elif cat in ['historical','fort','museum'] %}
+        <div>🔹 Hire a local guide for detailed history</div>
+        <div>🔹 Check timings — most sites close by 5 PM</div>
+        <div>🔹 Carry an ID for ticket concessions</div>
+        <div>🔹 Photography fees may apply at some sites</div>
+        <div>🔹 Allocate at least 2-3 hours for exploration</div>
+        {% else %}
+        <div>🔹 Check opening hours before visiting</div>
+        <div>🔹 Carry drinking water and sun protection</div>
+        <div>🔹 Try the local food specialties nearby</div>
+        <div>🔹 Respect local customs and traditions</div>
+        <div>🔹 Keep emergency numbers handy (100, 108)</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- FAQ Section -->
+  <div class="content-card" style="padding:var(--space-lg);margin-top:var(--space-lg);">
+    <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:var(--space-md);display:flex;align-items:center;gap:8px;">
+      ❓ Frequently Asked Questions
+    </h3>
+    <div class="faq-list" style="display:flex;flex-direction:column;gap:2px;">
+      <details class="faq-item" style="background:var(--bg-secondary);border-radius:var(--radius-lg);overflow:hidden;">
+        <summary style="padding:14px 16px;cursor:pointer;font-weight:600;font-size:.9rem;list-style:none;display:flex;justify-content:space-between;align-items:center;">
+          How do I reach {{ place.name }}?
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform .2s;flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <div style="padding:0 16px 14px;font-size:.85rem;color:var(--text-secondary);line-height:1.7;">
+          {% if place.district_name %}
+          {{ place.name }} is located in {{ place.district_name }} district, {{ place.state_name }}.
+          {% endif %}
+          {% if place.latitude and place.longitude %}
+          You can use the "Get Directions" button above for GPS navigation. The nearest railway station and airport details are available in the Nearby Services section.
+          {% else %}
+          Check the Nearby Services section for transport options.
+          {% endif %}
+        </div>
+      </details>
+      <details class="faq-item" style="background:var(--bg-secondary);border-radius:var(--radius-lg);overflow:hidden;">
+        <summary style="padding:14px 16px;cursor:pointer;font-weight:600;font-size:.9rem;list-style:none;display:flex;justify-content:space-between;align-items:center;">
+          Is there an entry fee?
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform .2s;flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <div style="padding:0 16px 14px;font-size:.85rem;color:var(--text-secondary);line-height:1.7;">
+          {% if place.entry_fee %}{{ place.entry_fee }}{% else %}Entry fee information varies. Most temples are free; historical monuments typically charge ₹25-50 for Indians and ₹200-500 for foreign tourists. Please verify current rates at the ticket counter.{% endif %}
+        </div>
+      </details>
+      <details class="faq-item" style="background:var(--bg-secondary);border-radius:var(--radius-lg);overflow:hidden;">
+        <summary style="padding:14px 16px;cursor:pointer;font-weight:600;font-size:.9rem;list-style:none;display:flex;justify-content:space-between;align-items:center;">
+          What are the visiting hours?
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="transition:transform .2s;flex-shrink:0;"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <div style="padding:0 16px 14px;font-size:.85rem;color:var(--text-secondary);line-height:1.7;">
+          {% if place.timings %}{{ place.timings }}{% else %}Most tourist sites in Bihar are open from 6:00 AM to 6:00 PM. Temples may have separate aarti timings. Museums are generally open 10:00 AM - 5:00 PM and closed on Mondays. Verify specific timings before your visit.{% endif %}
+        </div>
+      </details>
+    </div>
+  </div>
+</div>
+
+<!-- Gallery Lightbox Overlay -->
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lightbox-close">✕</button>
+  <button class="lightbox-prev" id="lightbox-prev">❮</button>
+  <button class="lightbox-next" id="lightbox-next">❯</button>
+  <img class="lightbox-img" id="lightbox-img" src="" alt="">
+  <p class="lightbox-caption" id="lightbox-caption"></p>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script src="{{ url_for('static', filename='js/gallery.js') }}"></script>
+<script>
+// Hero Image Slideshow
+(function() {
+  var slides = document.querySelectorAll('.place-hero-img[data-slide]');
+  if (slides.length <= 1) return;
+  var current = 0;
+  setInterval(function() {
+    slides[current].style.opacity = '0';
+    current = (current + 1) % slides.length;
+    slides[current].style.opacity = '1';
+  }, 5000);
+})();
+
+// Wishlist toggle
+function toggleWishlist(placeId) {
+  const icon = document.getElementById('wishlist-icon');
+  const text = document.getElementById('wishlist-text');
+  const isSaved = icon.textContent === '❤️';
+
+  const url = isSaved
+    ? '/wishlist/remove/' + placeId
+    : '/wishlist/add/' + placeId;
+
+  fetch(url, { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'added') {
+        icon.textContent = '❤️';
+        text.textContent = 'Saved';
+      } else {
+        icon.textContent = '🤍';
+        text.textContent = 'Save';
+      }
+    });
+}
+
+// Visited toggle
+function toggleVisited(placeId) {
+  fetch('/api/visited/' + placeId, { method: 'POST' })
+    .then(r => r.json())
+    .then(data => {
+      const icon = document.getElementById('visited-icon');
+      const text = document.getElementById('visited-text');
+      if (data.status === 'marked') {
+        icon.textContent = '✅'; text.textContent = 'Visited';
+      } else {
+        icon.textContent = '☐'; text.textContent = 'Mark Visited';
+      }
+    });
+}
+fetch('/api/visited/{{ place.id }}')
+  .then(r => r.json())
+  .then(data => {
+    if (data.visited) {
+      document.getElementById('visited-icon').textContent = '✅';
+      document.getElementById('visited-text').textContent = 'Visited';
+    }
+  });
+
+// Check wishlist status on load
+fetch('/wishlist/status/{{ place.id }}')
+  .then(r => r.json())
+  .then(data => {
+    if (data.wishlisted) {
+      document.getElementById('wishlist-icon').textContent = '❤️';
+      document.getElementById('wishlist-text').textContent = 'Saved';
+    }
+  });
+
+// Copy link
+function copyLink() {
+  navigator.clipboard.writeText(window.location.href).then(() => {
+    alert('Link copied to clipboard!');
+  });
+  document.getElementById('share-dropdown').classList.remove('open');
+}
+
+// Close share on outside click
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#share-dropdown')) {
+    document.getElementById('share-dropdown').classList.remove('open');
+  }
+});
+
+// Star rating
+function setRating(val) {
+  document.getElementById('rating-value').value = val;
+  document.querySelectorAll('#star-input .star').forEach((s, i) => {
+    s.classList.toggle('active', i < val);
+  });
+}
+// Default all 5 stars active
+setRating(5);
+
+// ═══ USER PHOTO UPLOAD ═══
+const userPhotoInput = document.getElementById('user-photo-input');
+const userUploadZone = document.getElementById('user-upload-zone');
+const userUploadContent = document.getElementById('user-upload-content');
+const userUploadPreview = document.getElementById('user-upload-preview');
+const userUploadActions = document.getElementById('user-upload-actions');
+
+userPhotoInput?.addEventListener('change', function() {
+  if (this.files.length > 0) showUserUploadPreview(this.files);
+});
+
+function showUserUploadPreview(files) {
+  const grid = document.getElementById('user-preview-grid');
+  grid.innerHTML = '';
+  Array.from(files).forEach(f => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      img.style.cssText = 'width:70px;height:52px;object-fit:cover;border-radius:6px;border:1px solid var(--border-color);';
+      grid.appendChild(img);
+    };
+    reader.readAsDataURL(f);
+  });
+  document.getElementById('user-preview-count').textContent = files.length + ' photo' + (files.length !== 1 ? 's' : '') + ' selected';
+  userUploadContent.style.display = 'none';
+  userUploadPreview.style.display = 'flex';
+  userUploadActions.style.display = 'flex';
+}
+
+// Drag & drop for user upload
+['dragenter','dragover','dragleave','drop'].forEach(evt => {
+  userUploadZone?.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); });
+});
+userUploadZone?.addEventListener('dragenter', () => userUploadZone.classList.add('drag-active'));
+userUploadZone?.addEventListener('dragover', () => userUploadZone.classList.add('drag-active'));
+userUploadZone?.addEventListener('dragleave', () => userUploadZone.classList.remove('drag-active'));
+var droppedFiles = null;
+userUploadZone?.addEventListener('drop', e => {
+  userUploadZone.classList.remove('drag-active');
+  if (e.dataTransfer.files.length > 0) {
+    droppedFiles = e.dataTransfer.files;
+    showUserUploadPreview(droppedFiles);
+  }
+});
+// Override form submit to handle dropped files (input.files is readonly)
+var userUploadForm = document.querySelector('#user-upload-zone')?.closest('form');
+if (userUploadForm) {
+  var origSubmit = userUploadForm.onsubmit;
+  userUploadForm.addEventListener('submit', function(ev) {
+    if (droppedFiles && droppedFiles.length > 0) {
+      ev.preventDefault();
+      var fd = new FormData();
+      fd.append('uploader_name', document.querySelector('input[name="uploader_name"]')?.value || '');
+      fd.append('caption', document.querySelector('input[name="caption"]')?.value || '');
+      for (var i = 0; i < droppedFiles.length; i++) {
+        fd.append('user_photos', droppedFiles[i]);
+      }
+      fetch(this.action, { method: 'POST', body: fd })
+        .then(function(r) { if (r.redirected) window.location.href = r.url; else window.location.reload(); })
+        .catch(function() { window.location.reload(); });
+    }
+  });
+}
+
+// Show distance from user + travel time + facility distances
+(function() {
+  var placeLat = {{ place.latitude or 'null' }};
+  var placeLng = {{ place.longitude or 'null' }};
+
+  function updateAllDistances() {
+    var loc = window.HY && HY.getLocation();
+    if (!loc) return;
+
+    // --- Place distance card ---
+    if (placeLat && placeLng) {
+      var dist = HY.haversine(loc.lat, loc.lng, placeLat, placeLng);
+      var card = document.getElementById('hy-distance-card');
+      var distEl = document.getElementById('hy-user-distance');
+      if (card && distEl) {
+        distEl.textContent = HY.formatDist(dist);
+        card.style.display = 'block';
+      }
+      // Travel time estimate
+      var timeEl = document.getElementById('hy-travel-time');
+      if (timeEl) {
+        var driveH = dist / 40;
+        var walkH = dist / 5;
+        var parts = [];
+        if (driveH < 1) parts.push(Math.round(driveH * 60) + ' min drive');
+        else parts.push(driveH.toFixed(1) + ' h drive');
+        if (dist < 10) parts.push(Math.round(walkH * 60) + ' min walk');
+        timeEl.textContent = '🚗 ' + parts.join(' · 🚶 ');
+      }
+      // Update directions link with origin
+      var dirBtn = document.getElementById('hy-dir-btn');
+      if (dirBtn) {
+        dirBtn.href = 'https://www.google.com/maps/dir/?api=1&origin=' +
+          loc.lat + ',' + loc.lng + '&destination=' + placeLat + ',' + placeLng;
+      }
+      var distText = document.getElementById('distance-text');
+      if (distText) distText.textContent = HY.formatDist(dist) + ' from your location';
+    }
+
+    // --- Facility distances ---
+    document.querySelectorAll('.hy-facility-item[data-lat][data-lng]').forEach(function(el) {
+      var fLat = parseFloat(el.dataset.lat);
+      var fLng = parseFloat(el.dataset.lng);
+      if (!fLat || !fLng) return;
+      var fDist = HY.haversine(loc.lat, loc.lng, fLat, fLng);
+      var distEl = el.querySelector('.hy-facility-dist');
+      if (distEl) distEl.textContent = '📍 ' + HY.formatDist(fDist);
+    });
+  }
+
+  // Run after HY is ready
+  setTimeout(updateAllDistances, 600);
+  // Also re-run when user requests location
+  document.addEventListener('hy-location-updated', updateAllDistances);
+})();
+</script>
+{% endblock %}

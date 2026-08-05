@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block title %}Hero Media Manager — Admin — {{ app_name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+
+{% block content %}
+{% set admin_active = 'hero_media' %}
+<div class="admin-layout">
+  {% include "partials/admin_sidebar.html" %}
+
+  <!-- Main Content -->
+  <div class="admin-main">
+
+    <h1 style="font-family:var(--font-heading);font-size:1.8rem;margin-bottom:4px;">🖼️ Hero Media <span class="text-gradient-saffron">Manager</span></h1>
+    <p style="color:var(--text-muted);margin-bottom:var(--space-xl);">Upload, manage, and configure hero background images and videos. Changes appear instantly on the homepage.</p>
+
+    <!-- Upload Section -->
+    <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-xl);padding:var(--space-xl);margin-bottom:var(--space-xl);">
+      <h2 style="font-family:var(--font-heading);font-size:1.1rem;margin-bottom:var(--space-lg);">📤 Upload New Backgrounds</h2>
+      <form method="POST" action="{{ url_for('admin.hero_media_upload') }}" enctype="multipart/form-data">
+{{ csrf_input() }}
+        <div style="border:2px dashed var(--border-color);border-radius:var(--radius-lg);padding:var(--space-2xl);text-align:center;margin-bottom:var(--space-lg);cursor:pointer;transition:all 0.3s;" id="upload-zone" onclick="document.getElementById('media-input').click()">
+          <span style="font-size:2.5rem;display:block;margin-bottom:8px;">📷</span>
+          <p style="font-weight:600;margin-bottom:4px;">Drag & drop or click to upload</p>
+          <p style="font-size:0.82rem;color:var(--text-muted);">JPG, PNG, WebP, MP4 • Max 1920px auto-resize</p>
+          <input type="file" name="media" id="media-input" multiple accept="image/*,video/mp4,video/webm" style="display:none;">
+        </div>
+        <div style="display:flex;gap:var(--space-md);align-items:end;">
+          <div style="flex:1;">
+            <label style="font-size:0.82rem;font-weight:600;display:block;margin-bottom:4px;">Title (optional)</label>
+            <input type="text" name="title" placeholder="e.g., Bodh Gaya Sunrise" class="form-input" style="padding:10px 14px;">
+          </div>
+          <button type="submit" class="btn btn-primary" style="white-space:nowrap;">Upload Media</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Settings Section -->
+    <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-xl);padding:var(--space-xl);margin-bottom:var(--space-xl);">
+      <h2 style="font-family:var(--font-heading);font-size:1.1rem;margin-bottom:var(--space-lg);">⚙️ Display Settings</h2>
+      <form method="POST" action="{{ url_for('admin.hero_media_settings') }}">
+{{ csrf_input() }}
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-lg);margin-bottom:var(--space-lg);">
+          <div>
+            <label style="font-size:0.82rem;font-weight:600;display:block;margin-bottom:4px;">Background Type</label>
+            <select name="bg_type" class="form-input" style="padding:10px 14px;">
+              <option value="slideshow" {% if settings.bg_type == 'slideshow' %}selected{% endif %}>Image Slideshow</option>
+              <option value="single" {% if settings.bg_type == 'single' %}selected{% endif %}>Single Image</option>
+              <option value="video" {% if settings.bg_type == 'video' %}selected{% endif %}>Video Background</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.82rem;font-weight:600;display:block;margin-bottom:4px;">Slideshow Interval</label>
+            <select name="slideshow_interval" class="form-input" style="padding:10px 14px;">
+              {% for sec in [5, 6, 8, 10, 15, 30] %}
+              <option value="{{ sec }}" {% if settings.slideshow_interval == sec %}selected{% endif %}>{{ sec }} seconds</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.82rem;font-weight:600;display:block;margin-bottom:4px;">Overlay Opacity</label>
+            <select name="overlay_opacity" class="form-input" style="padding:10px 14px;">
+              {% for val in [0.3, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7] %}
+              <option value="{{ val }}" {% if settings.overlay_opacity == val %}selected{% endif %}>{{ (val * 100)|int }}%</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.82rem;font-weight:600;display:block;margin-bottom:4px;">Transition</label>
+            <select name="transition_effect" class="form-input" style="padding:10px 14px;">
+              <option value="fade" {% if settings.transition_effect == 'fade' %}selected{% endif %}>Fade</option>
+              <option value="crossfade" {% if settings.transition_effect == 'crossfade' %}selected{% endif %}>Crossfade</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">💾 Save Settings</button>
+      </form>
+    </div>
+
+    <!-- Media Grid -->
+    <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-xl);padding:var(--space-xl);">
+      <h2 style="font-family:var(--font-heading);font-size:1.1rem;margin-bottom:var(--space-lg);">🖼️ Media Library ({{ media|length }} items)</h2>
+
+      {% if media %}
+      <div id="hero-media-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--space-lg);">
+        {% for item in media %}
+        <div class="hero-media-card" data-id="{{ item.id }}" style="background:var(--bg-elevated);border:1px solid {% if item.is_active %}var(--accent-emerald){% else %}var(--border-color){% endif %};border-radius:var(--radius-lg);overflow:hidden;position:relative;transition:all 0.3s;">
+          <!-- Preview -->
+          <div style="aspect-ratio:16/9;overflow:hidden;background:#111;position:relative;">
+            {% if item.media_type == 'video' %}
+            <video src="/static/hero/{{ item.filename }}" style="width:100%;height:100%;object-fit:cover;" muted loop onmouseover="this.play()" onmouseout="this.pause()"></video>
+            {% else %}
+            <img src="/static/hero/{{ item.filename }}" alt="{{ item.title }}" style="width:100%;height:100%;object-fit:cover;" loading="lazy">
+            {% endif %}
+          </div>
+
+          <!-- Status Badge -->
+          <div style="position:absolute;top:8px;right:8px;display:flex;gap:4px;">
+            {% if item.is_active %}
+            <span style="padding:3px 10px;border-radius:var(--radius-full);background:rgba(16,185,129,0.9);color:white;font-size:0.7rem;font-weight:600;">ACTIVE</span>
+            {% else %}
+            <span style="padding:3px 10px;border-radius:var(--radius-full);background:rgba(100,100,100,0.8);color:white;font-size:0.7rem;font-weight:600;">HIDDEN</span>
+            {% endif %}
+          </div>
+
+          {% if item.media_type == 'video' %}
+          <div style="position:absolute;top:8px;left:8px;">
+            <span style="padding:3px 10px;border-radius:var(--radius-full);background:rgba(99,102,241,0.9);color:white;font-size:0.7rem;font-weight:600;">🎬 VIDEO</span>
+          </div>
+          {% endif %}
+
+          <!-- Info & Actions -->
+          <div style="padding:var(--space-md);">
+            <p style="font-weight:600;font-size:0.85rem;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ item.title or item.filename }}</p>
+            <p style="font-size:0.72rem;color:var(--text-muted);margin-bottom:var(--space-sm);">Order: {{ item.sort_order }} • {{ item.uploaded_at.strftime('%Y-%m-%d') if item.uploaded_at else '' }}</p>
+            
+            <div style="display:flex;gap:6px;margin-bottom:6px;">
+              <button type="button" onclick="moveMediaItem(this, -1)" class="btn btn-sm btn-outline" style="padding:4px 8px;font-size:0.75rem;" title="Move Up/Left">⬆️</button>
+              <button type="button" onclick="moveMediaItem(this, 1)" class="btn btn-sm btn-outline" style="padding:4px 8px;font-size:0.75rem;" title="Move Down/Right">⬇️</button>
+            </div>
+
+            <div style="display:flex;gap:6px;">
+              <form method="POST" action="{{ url_for('admin.hero_media_toggle', media_id=item.id) }}" style="flex:1;">
+{{ csrf_input() }}
+                <button type="submit" class="btn btn-sm {% if item.is_active %}btn-outline{% else %}btn-primary{% endif %}" style="width:100%;font-size:0.75rem;padding:6px;">
+                  {% if item.is_active %}👁️ Hide{% else %}✅ Activate{% endif %}
+                </button>
+              </form>
+              <form method="POST" action="{{ url_for('admin.hero_media_delete', media_id=item.id) }}" style="flex-shrink:0;">
+{{ csrf_input() }}
+                <button type="submit" class="btn btn-sm btn-outline" style="font-size:0.75rem;padding:6px 10px;color:var(--accent-rose);border-color:var(--accent-rose);">🗑️</button>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="text-align:center;padding:var(--space-3xl);">
+        <span style="font-size:3rem;display:block;margin-bottom:var(--space-md);">🖼️</span>
+        <h3 style="font-family:var(--font-heading);margin-bottom:4px;">No hero media uploaded</h3>
+        <p style="color:var(--text-muted);">Upload images or videos above. They will appear as hero backgrounds on the homepage.</p>
+        <p style="color:var(--text-muted);font-size:0.85rem;margin-top:var(--space-md);">💡 Until you upload custom media, the homepage will use default Unsplash images.</p>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const uploadZone = document.getElementById('upload-zone');
+  const mediaInput = document.getElementById('media-input');
+
+  if (uploadZone && mediaInput) {
+    ['dragenter', 'dragover'].forEach(evt => {
+      uploadZone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadZone.style.borderColor = 'var(--accent-gold)';
+        uploadZone.style.background = 'rgba(251,191,36,0.05)';
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(evt => {
+      uploadZone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        uploadZone.style.borderColor = 'var(--border-color)';
+        uploadZone.style.background = 'transparent';
+      });
+    });
+
+    uploadZone.addEventListener('drop', (e) => {
+      if (e.dataTransfer.files && e.dataTransfer.files.length) {
+        mediaInput.files = e.dataTransfer.files;
+        updatePreview(e.dataTransfer.files);
+      }
+    });
+
+    mediaInput.addEventListener('change', () => {
+      updatePreview(mediaInput.files);
+    });
+  }
+
+  function updatePreview(files) {
+    let previewContainer = document.getElementById('media-upload-preview');
+    if (!previewContainer) {
+      previewContainer = document.createElement('div');
+      previewContainer.id = 'media-upload-preview';
+      previewContainer.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;justify-content:center;';
+      uploadZone.appendChild(previewContainer);
+    }
+    previewContainer.innerHTML = '';
+    Array.from(files).forEach(f => {
+      const chip = document.createElement('span');
+      chip.style.cssText = 'padding:4px 10px;border-radius:20px;background:var(--bg-elevated);border:1px solid var(--accent-gold);font-size:0.75rem;color:var(--text-primary);';
+      chip.textContent = `📷 ${f.name} (${(f.size/1024/1024).toFixed(1)}MB)`;
+      previewContainer.appendChild(chip);
+    });
+  }
+});
+
+function moveMediaItem(btn, direction) {
+  const card = btn.closest('.hero-media-card');
+  const container = document.getElementById('hero-media-grid');
+  if (!container || !card) return;
+  const cards = Array.from(container.children);
+  const index = cards.indexOf(card);
+  if (direction === -1 && index > 0) {
+    container.insertBefore(card, cards[index - 1]);
+  } else if (direction === 1 && index < cards.length - 1) {
+    container.insertBefore(cards[index + 1], card);
+  }
+  saveMediaOrder(container);
+}
+
+function saveMediaOrder(container) {
+  const ids = Array.from(container.children).map(c => parseInt(c.dataset.id));
+  fetch("{{ url_for('admin.hero_media_reorder') }}", {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': '{{ session.get("_csrf_token", "") }}'
+    },
+    body: JSON.stringify({ ids: ids })
+  }).then(r => r.json()).then(data => {
+    if (data.ok) {
+      const toast = document.createElement('div');
+      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:rgba(16,185,129,0.9);color:white;padding:8px 16px;border-radius:8px;z-index:9999;font-size:0.85rem;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+      toast.textContent = '✅ Media order saved successfully';
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2500);
+    }
+  });
+}
+</script>
+{% endblock %}
+{% endblock %}

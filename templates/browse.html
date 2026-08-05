@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Browse States — {{ app_name }}{% endblock %}
+{% block meta_desc %}Browse all states on HiddenYatra. Discover tourist places, districts, and hidden gems across India.{% endblock %}
+
+{% block extra_css %}
+<style>
+.browse-hero {
+  padding: 50px var(--space-lg) 30px;
+  text-align: center;
+  background: linear-gradient(135deg, var(--bg-body), rgba(0,191,166,0.04));
+}
+.browse-hero h1 {
+  font-family: var(--font-heading); font-size: clamp(1.5rem, 3vw, 2rem);
+  margin-bottom: 6px;
+}
+.browse-hero p { color: var(--text-muted); font-size: 0.9rem; }
+.browse-grid {
+  max-width: 900px; margin: var(--space-xl) auto;
+  padding: 0 var(--space-lg) var(--space-3xl);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-lg);
+}
+.browse-card {
+  display: flex; align-items: center; gap: var(--space-lg);
+  padding: var(--space-xl);
+  background: var(--bg-card); border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  text-decoration: none; color: var(--text-primary);
+  transition: all 0.3s;
+}
+.browse-card:hover {
+  border-color: var(--primary); transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+}
+.browse-card-icon {
+  width: 56px; height: 56px; border-radius: var(--radius-lg);
+  background: var(--primary-50);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.5rem; flex-shrink: 0;
+}
+.browse-card-name { font-family: var(--font-heading); font-weight: 700; font-size: 1.05rem; margin-bottom: 2px; }
+.browse-card-meta { font-size: 0.78rem; color: var(--text-muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="browse-hero">
+  <h1>🗺️ Browse <span class="text-gradient-saffron">States</span></h1>
+  <p>Explore tourist destinations across India</p>
+</section>
+
+<div class="browse-grid">
+  {% for state in states %}
+  <a href="{{ url_for('main.state_detail', slug=state.slug) }}" class="browse-card">
+    <div class="browse-card-icon">🏛️</div>
+    <div>
+      <div class="browse-card-name">{{ state.name }}</div>
+      <div class="browse-card-meta">{{ state.district_count or 0 }} districts · {{ state.place_count or 0 }} places</div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endblock %}

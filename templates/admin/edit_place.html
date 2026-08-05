@@ -1,0 +1,489 @@
+{% extends "base.html" %}
+{% block title %}Edit {{ place.name }} — Admin — {{ app_name }}{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+.admin-header,.form-section{max-width:960px;margin:0 auto;padding:var(--space-xl) var(--space-lg);}
+.form-section{background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-xl);padding:var(--space-xl);margin-bottom:var(--space-lg);}
+.form-section-title{font-family:var(--font-heading);font-size:1.15rem;font-weight:700;margin-bottom:var(--space-lg);display:flex;align-items:center;gap:8px;}
+.form-label{font-size:0.85rem;font-weight:500;color:var(--text-secondary);margin-bottom:4px;}
+.form-select{padding:10px 14px;background:var(--bg-elevated);border:1px solid var(--border-color);border-radius:var(--radius-md);color:var(--text-primary);font-size:0.9rem;font-family:var(--font-body);width:100%;}
+.form-file{padding:10px;background:var(--bg-elevated);border:1px solid var(--border-color);border-radius:var(--radius-md);color:var(--text-primary);width:100%;}
+.form-actions{max-width:960px;margin:0 auto;display:flex;gap:var(--space-md);padding:var(--space-lg);align-items:center;}
+.admin-map{height:260px;border-radius:var(--radius-md);background:var(--bg-elevated);margin-bottom:var(--space-md);position:relative;overflow:hidden;z-index:1;}
+.edit-photos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:var(--space-md);}
+.edit-photo-item{position:relative;border-radius:var(--radius-md);overflow:hidden;aspect-ratio:4/3;border:2px solid var(--border-color);transition:border-color 0.2s;}
+.edit-photo-item.is-cover{border-color:var(--saffron);box-shadow:0 0 12px rgba(255,107,53,0.2);}
+.edit-photo-item img{width:100%;height:100%;object-fit:cover;}
+.edit-photo-actions{position:absolute;top:0;right:0;display:flex;gap:2px;}
+.edit-photo-badge{position:absolute;bottom:0;left:0;right:0;padding:3px 8px;background:rgba(0,0,0,0.7);font-size:0.65rem;font-weight:600;text-align:center;}
+.edit-photo-badge.cover{background:var(--gradient-saffron);color:white;}
+.btn-icon-sm{width:28px;height:28px;border-radius:4px;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:0.75rem;transition:all 0.2s;}
+.btn-icon-delete{background:rgba(244,63,94,0.8);color:white;}
+.btn-icon-delete:hover{background:var(--rose);}
+.btn-icon-cover{background:rgba(255,107,53,0.8);color:white;}
+.btn-icon-cover:hover{background:var(--saffron);}
+.specialty-form-row{display:grid;grid-template-columns:1fr 1fr 120px 1fr auto;gap:var(--space-sm);margin-bottom:var(--space-sm);align-items:start;}
+.photo-preview{display:flex;gap:var(--space-sm);flex-wrap:wrap;margin-top:var(--space-sm);}
+.btn-danger{background:rgba(244,63,94,0.15);color:var(--rose);border:1px solid rgba(244,63,94,0.3);}
+.edit-warning{background:rgba(250,204,21,0.08);border:1px solid rgba(250,204,21,0.3);border-radius:var(--radius-md);padding:var(--space-md);margin-bottom:var(--space-lg);font-size:0.85rem;color:var(--gold);}
+.chip-select{display:flex;gap:var(--space-sm);flex-wrap:wrap;}
+.chip-opt{padding:6px 14px;border-radius:var(--radius-full);border:1px solid var(--border-color);background:var(--bg-elevated);cursor:pointer;font-size:0.85rem;color:var(--text-secondary);transition:all 0.2s;display:flex;align-items:center;gap:4px;}
+.chip-opt:hover{border-color:var(--saffron);}
+.chip-opt.active{border-color:var(--saffron);background:rgba(255,107,53,0.1);color:var(--saffron);font-weight:600;}
+.chip-opt input{display:none;}
+.history-item{display:flex;align-items:center;gap:var(--space-md);padding:var(--space-sm) 0;border-bottom:1px solid var(--border-light);font-size:0.85rem;}
+.history-item:last-child{border:none;}
+
+/* Drop Zone */
+.cover-drop-zone{
+  padding:var(--space-xl);
+  text-align:center;
+  background:var(--bg-elevated);
+  border:2px dashed var(--border-color);
+  border-radius:var(--radius-lg);
+  cursor:pointer;
+  transition:all 0.3s ease;
+}
+.cover-drop-zone:hover{
+  border-color:var(--primary);
+  background:var(--primary-50);
+}
+.cover-drop-zone.drag-active{
+  border-color:var(--primary);
+  background:var(--primary-100);
+  box-shadow:0 0 20px rgba(255,122,24,0.1);
+  transform:scale(1.01);
+}
+.drop-zone-content{
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  pointer-events:none;
+}
+.drop-zone-preview{
+  display:flex;flex-direction:column;align-items:center;
+  pointer-events:none;
+}
+.upload-submit-row{
+  margin-top:var(--space-md);
+  gap:var(--space-sm);
+  align-items:center;
+}
+
+@media(max-width:768px){.specialty-form-row{grid-template-columns:1fr;}.edit-photos-grid{grid-template-columns:repeat(2,1fr);}}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="admin-header">
+  <nav class="breadcrumb">
+    <a href="{{ url_for('admin.dashboard') }}">Dashboard</a> / <span>Edit: {{ place.name }}</span>
+  </nav>
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-md);">
+    <h1 class="page-title">Edit <span class="text-gradient-saffron">{{ place.name }}</span></h1>
+    <div style="display:flex;gap:var(--space-sm);">
+      <a href="{{ url_for('places.place_detail', slug=place.slug) }}" class="btn btn-outline btn-sm" target="_blank">👁️ View Live</a>
+      <form method="POST" action="{{ url_for('admin.delete_place_view', place_id=place.id) }}" style="display:inline;">
+{{ csrf_input() }}
+        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('⚠️ Are you sure you want to permanently delete {{ place.name }}? This cannot be undone.')">🗑️ Delete Place</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<form method="POST" enctype="multipart/form-data" class="admin-form" id="edit-form">
+{{ csrf_input() }}
+
+  <!-- ═══ LOCATION ═══ -->
+  <div class="form-section">
+    <h2 class="form-section-title">📍 Location</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">State *</label>
+        <input type="text" name="state_name" class="form-input" value="{{ place.state_name }}" required list="states-list">
+        <datalist id="states-list">{% for s in states %}<option value="{{ s.name }}">{% endfor %}</datalist>
+      </div>
+      <div class="form-group">
+        <label class="form-label">District</label>
+        <input type="text" name="district_name" class="form-input" value="{{ place.district_name or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Block</label>
+        <input type="text" name="block_name" class="form-input" value="{{ place.block_name or '' }}">
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PLACE DETAILS ═══ -->
+  <div class="form-section">
+    <h2 class="form-section-title">📝 Place Details</h2>
+    <div class="form-group" style="margin-bottom:var(--space-md);">
+      <label class="form-label">Place Name *</label>
+      <input type="text" name="name" class="form-input" value="{{ place.name }}" required style="font-size:1.1rem;" id="place-name-input">
+    </div>
+    <div class="form-group" style="margin-bottom:var(--space-md);">
+      <label class="form-label">Description</label>
+      <textarea name="description" class="form-textarea" rows="6">{{ place.description }}</textarea>
+    </div>
+    <div class="form-row" style="margin-bottom:var(--space-md);">
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select name="category" class="form-select" id="category-select">
+          {% for code, label in categories %}
+          <option value="{{ code }}" {% if place.category == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Best Time to Visit</label>
+        <input type="text" name="best_time_to_visit" class="form-input" value="{{ place.best_time_to_visit or '' }}" placeholder="e.g., October to March">
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:var(--space-md);">
+      <div class="form-group">
+        <label class="form-label">Entry Fee</label>
+        <div class="chip-select">
+          {% for val in ['Free', '₹10-50', '₹50-200', '₹200+'] %}
+          <label class="chip-opt {% if place.entry_fee == val %}active{% endif %}">
+            <input type="radio" name="entry_fee" value="{{ val }}" {% if place.entry_fee == val %}checked{% endif %}>{{ val }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label"><input type="checkbox" name="is_featured" {% if place.is_featured %}checked{% endif %}> ⭐ Featured Place</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Travel Tips / Local Tips</label>
+      <textarea name="travel_tips" class="form-textarea" rows="3" placeholder="Insider tips for travelers...">{{ place.travel_tips or '' }}</textarea>
+    </div>
+  </div>
+
+  <!-- ═══ LOCAL GUIDE FIELDS ═══ -->
+  <div class="form-section">
+    <h2 class="form-section-title">🧭 Local Guide Info</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label"><input type="checkbox" name="is_hidden_gem" {% if place.is_hidden_gem %}checked{% endif %}> 💎 Hidden Gem</label>
+      </div>
+      <div class="form-group">
+        <label class="form-label"><input type="checkbox" name="family_friendly" {% if place.family_friendly %}checked{% endif %}> 👨‍👩‍👧 Family Friendly</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">📖 History & Heritage</label>
+      <textarea name="history" class="form-textarea" rows="3" placeholder="Historical background of this place...">{{ place.history or '' }}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">💡 Local Tips <span style="color:var(--text-muted);font-weight:400;">(pipe-separated: tip1|tip2|tip3)</span></label>
+      <textarea name="local_tips" class="form-textarea" rows="2" placeholder="Visit during monsoon for best views|Carry drinking water|Best at sunset">{{ place.local_tips or '' }}</textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">⚠️ Safety Tips</label>
+      <textarea name="safety_tips" class="form-textarea" rows="2" placeholder="Be careful during monsoon, slippery paths...">{{ place.safety_tips or '' }}</textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">🌤️ Best Season</label>
+        <select name="best_season" class="form-input">
+          <option value="">Select</option>
+          {% for s in ['All Year', 'Monsoon', 'Winter', 'Summer', 'Spring', 'Autumn'] %}
+          <option value="{{ s }}" {% if place.best_season == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">🕐 Best Time of Day</label>
+        <select name="best_time_of_day" class="form-input">
+          <option value="">Select</option>
+          {% for t in ['Morning', 'Afternoon', 'Evening', 'Sunset', 'Night', 'Any Time'] %}
+          <option value="{{ t }}" {% if place.best_time_of_day == t %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">👥 Crowd Level</label>
+        <select name="crowd_level" class="form-input">
+          <option value="">Select</option>
+          {% for c in ['Low', 'Medium', 'High'] %}
+          <option value="{{ c }}" {% if place.crowd_level == c %}selected{% endif %}>{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">🅿️ Parking Info</label>
+      <input type="text" name="parking_info" class="form-input" value="{{ place.parking_info or '' }}" placeholder="Free parking available near entrance">
+    </div>
+  </div>
+
+  <!-- ═══ HOW TO REACH ═══ -->
+  <div class="form-section">
+    <h2 class="form-section-title">🚗 How to Reach</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">🚂 Nearest Railway Station</label>
+        <input type="text" name="nearest_railway" class="form-input" value="{{ place.nearest_railway or '' }}" placeholder="Rajgir Railway Station (5 km)">
+      </div>
+      <div class="form-group">
+        <label class="form-label">🚌 Nearest Bus Stand</label>
+        <input type="text" name="nearest_bus_stand" class="form-input" value="{{ place.nearest_bus_stand or '' }}" placeholder="Nawada Bus Stand (20 km)">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">✈️ Nearest Airport</label>
+        <input type="text" name="nearest_airport" class="form-input" value="{{ place.nearest_airport or '' }}" placeholder="Jay Prakash Narayan Airport, Patna (90 km)">
+      </div>
+      <div class="form-group">
+        <label class="form-label">🛣️ Road Connectivity</label>
+        <input type="text" name="road_connectivity" class="form-input" value="{{ place.road_connectivity or '' }}" placeholder="NH 31 → SH 87, well-connected">
+      </div>
+    </div>
+  </div>
+  <div class="form-section">
+    <h2 class="form-section-title">🗺️ Map & Coordinates</h2>
+    <div id="admin-map" class="admin-map" data-lat="{{ place.latitude or '' }}" data-lng="{{ place.longitude or '' }}"></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Latitude</label>
+        <input type="number" name="latitude" id="lat-input" class="form-input" step="any" value="{{ place.latitude or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Longitude</label>
+        <input type="number" name="longitude" id="lng-input" class="form-input" step="any" value="{{ place.longitude or '' }}">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Google Maps Link</label>
+        <input type="url" name="maps_link" class="form-input" value="{{ place.maps_link or '' }}">
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SPECIALTIES ═══ -->
+  <div class="form-section">
+    <h2 class="form-section-title">🍛 Local Specialties</h2>
+
+</form>
+<!-- ═══ MAIN EDIT FORM ENDS HERE ═══ -->
+<!-- Image upload forms must be OUTSIDE the main form (HTML forbids nested forms) -->
+
+<!-- ═══ COVER IMAGE (separate form) ═══ -->
+<div class="form-section">
+  <h2 class="form-section-title">📷 Cover Image</h2>
+  <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:var(--space-md);">This image appears on place cards, featured sections, and as the hero banner on the place detail page.</p>
+
+  {% if place.cover_image %}
+  <div style="display:flex;gap:var(--space-lg);align-items:flex-start;flex-wrap:wrap;margin-bottom:var(--space-lg);">
+    <div style="position:relative;width:280px;border-radius:var(--radius-lg);overflow:hidden;border:2px solid var(--primary);box-shadow:0 0 16px rgba(255,122,24,0.15);">
+      <img src="{% if place.cover_image.startswith('http') %}{{ place.cover_image }}{% else %}{{ url_for('static', filename='uploads/places/' + place.cover_image) }}{% endif %}" alt="Cover" style="width:100%;aspect-ratio:16/10;object-fit:cover;display:block;">
+      <div style="position:absolute;bottom:0;left:0;right:0;padding:6px 12px;background:linear-gradient(transparent,rgba(0,0,0,0.8));font-size:0.72rem;color:white;font-weight:600;">📷 CURRENT COVER</div>
+    </div>
+    <div style="flex:1;min-width:200px;">
+      <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:var(--space-sm);">
+        <strong>File:</strong> {{ place.cover_image }}<br>
+        <strong>Status:</strong> <span style="color:var(--accent-emerald);">✅ Active</span>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div style="padding:var(--space-xl);text-align:center;background:var(--bg-elevated);border:2px dashed var(--border-color);border-radius:var(--radius-lg);margin-bottom:var(--space-lg);color:var(--text-muted);">
+    <span style="font-size:2rem;display:block;margin-bottom:8px;">📷</span>
+    <p style="font-size:0.88rem;font-weight:500;">No cover image set</p>
+    <p style="font-size:0.78rem;">Upload one below to make this place stand out!</p>
+  </div>
+  {% endif %}
+
+  <form method="POST" action="{{ url_for('admin.upload_cover', place_id=place.id) }}" enctype="multipart/form-data">
+{{ csrf_input() }}
+    <div style="padding:var(--space-lg);background:var(--bg-elevated);border:2px dashed var(--border-color);border-radius:var(--radius-lg);text-align:center;">
+      <p style="font-size:1.5rem;margin-bottom:6px;">📤</p>
+      <p style="font-weight:600;font-size:0.9rem;margin-bottom:var(--space-sm);">{% if place.cover_image %}Replace Cover Image{% else %}Upload Cover Image{% endif %}</p>
+      <input type="file" name="cover_image" id="cover-file-input" accept="image/jpeg,image/png,image/webp,image/gif" style="margin:0 auto;max-width:300px;" required>
+      <div id="cover-preview-area" style="margin-top:var(--space-md);display:none;">
+        <img id="cover-preview-img" src="" alt="Preview" style="max-height:180px;border-radius:var(--radius-md);object-fit:contain;">
+      </div>
+    </div>
+    <div style="margin-top:var(--space-md);">
+      <button type="submit" class="btn btn-primary btn-sm">📷 Save Cover Image</button>
+      <span style="font-size:0.78rem;color:var(--text-muted);margin-left:8px;">JPG, PNG, WebP • Max 16MB</span>
+    </div>
+  </form>
+</div>
+
+<!-- ═══ OFFICIAL GALLERY (separate form) ═══ -->
+<div class="form-section">
+  <h2 class="form-section-title">🖼️ Official Gallery <span style="font-size:0.82rem;font-weight:400;color:var(--text-muted);margin-left:8px;">{{ photos | length }} image{{ 's' if photos | length != 1 }}</span></h2>
+  <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:var(--space-md);">Gallery images appear on the place detail page. They do not replace the cover image.</p>
+
+  {% if photos %}
+  <div class="edit-photos-grid" style="margin-bottom:var(--space-lg);">
+    {% for photo in photos %}
+    <div class="edit-photo-item {% if place.cover_image == photo.filename %}is-cover{% endif %}">
+      <img src="{{ url_for('static', filename='uploads/places/' + photo.filename) }}" alt="{{ photo.caption or '' }}">
+      <div class="edit-photo-actions">
+        <form method="POST" action="{{ url_for('admin.set_cover_image', place_id=place.id) }}" style="display:inline;">
+{{ csrf_input() }}
+          <input type="hidden" name="filename" value="{{ photo.filename }}">
+          <button type="submit" class="btn-icon-sm btn-icon-cover" title="Set as cover">🌟</button>
+        </form>
+        <form method="POST" action="{{ url_for('admin.delete_photo_view', photo_id=photo.id) }}" style="display:inline;">
+{{ csrf_input() }}
+          <input type="hidden" name="place_id" value="{{ place.id }}">
+          <button type="submit" class="btn-icon-sm btn-icon-delete" onclick="return confirm('Delete this photo?')" title="Delete">✕</button>
+        </form>
+      </div>
+      {% if place.cover_image == photo.filename %}
+      <div class="edit-photo-badge cover">📷 COVER</div>
+      {% endif %}
+      {% if photo.caption and photo.caption != 'Cover Image' %}
+      <div class="edit-photo-badge">{{ photo.caption }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div style="padding:var(--space-lg);text-align:center;color:var(--text-muted);background:var(--bg-elevated);border-radius:var(--radius-md);margin-bottom:var(--space-lg);">
+    <span style="font-size:1.5rem;">🖼️</span>
+    <p style="font-size:0.85rem;margin-top:6px;">No gallery images uploaded yet.</p>
+  </div>
+  {% endif %}
+
+  <form method="POST" action="{{ url_for('admin.upload_gallery', place_id=place.id) }}" enctype="multipart/form-data">
+{{ csrf_input() }}
+    <div style="padding:var(--space-lg);background:var(--bg-elevated);border:2px dashed var(--border-color);border-radius:var(--radius-lg);text-align:center;">
+      <p style="font-size:1.5rem;margin-bottom:6px;">🖼️</p>
+      <p style="font-weight:600;font-size:0.9rem;margin-bottom:var(--space-sm);">Upload Gallery Images</p>
+      <input type="file" name="gallery_images" accept="image/jpeg,image/png,image/webp,image/gif" multiple style="margin:0 auto;max-width:300px;" required>
+    </div>
+    <div style="margin-top:var(--space-md);">
+      <button type="submit" class="btn btn-primary btn-sm">📸 Upload Gallery Images</button>
+      <span style="font-size:0.78rem;color:var(--text-muted);margin-left:8px;">Select multiple files</span>
+    </div>
+  </form>
+</div>
+
+<!-- ═══ REOPEN form for specialties ═══ -->
+<form method="POST" enctype="multipart/form-data" class="admin-form" id="edit-form-specialties">
+{{ csrf_input() }}
+  <div class="form-section">
+    <h2 class="form-section-title">🍛 Local Specialties</h2>
+    <div id="specialties-container">
+      {% for spec in specialties %}
+      <div class="specialty-form-row">
+        <input type="text" name="spec_name[]" class="form-input" value="{{ spec.name }}" placeholder="Name">
+        <input type="text" name="spec_description[]" class="form-input" value="{{ spec.description }}" placeholder="Description">
+        <select name="spec_category[]" class="form-select">
+          {% for code, label in specialty_categories %}
+          <option value="{{ code }}" {% if spec.category == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <input type="text" name="spec_where[]" class="form-input" value="{{ spec.where_to_find }}" placeholder="Where to find">
+        <button type="button" class="btn btn-danger btn-sm remove-spec-btn" onclick="this.closest('.specialty-form-row').remove()">✕</button>
+      </div>
+      {% endfor %}
+    </div>
+    <button type="button" class="btn btn-outline btn-sm" id="add-specialty-btn">+ Add Specialty</button>
+  </div>
+
+  <!-- ═══ EDIT HISTORY ═══ -->
+  {% if edit_history %}
+  <div class="form-section">
+    <h2 class="form-section-title">📋 Edit History</h2>
+    {% for log in edit_history %}
+    <div class="history-item">
+      <span>{% if log.action == 'edit' %}✏️{% elif log.action == 'approve' %}✅{% elif log.action == 'cover_change' %}📷{% else %}📝{% endif %}</span>
+      <span style="flex:1;">{{ log.details }}</span>
+      <span style="color:var(--text-muted);">{{ log.created_at.strftime('%Y-%m-%d %H:%M') if log.created_at else '' }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ═══ ACTIONS ═══ -->
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary btn-lg" onclick="return confirm('Save all changes to {{ place.name }}?')">💾 Update Place</button>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline">Cancel</a>
+    <span style="flex:1;"></span>
+    <span style="font-size:0.8rem;color:var(--text-muted);">ID: {{ place.id }} • Slug: {{ place.slug }} • Views: {{ place.view_count or 0 }}</span>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ═══ COVER IMAGE: Simple Preview ═══
+var coverInput = document.getElementById('cover-file-input');
+if (coverInput) {
+  coverInput.addEventListener('change', function() {
+    var previewArea = document.getElementById('cover-preview-area');
+    var previewImg = document.getElementById('cover-preview-img');
+    if (this.files && this.files[0]) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        previewImg.src = e.target.result;
+        previewArea.style.display = 'block';
+      };
+      reader.readAsDataURL(this.files[0]);
+    }
+  });
+}
+
+// ═══ Chip select ═══
+document.querySelectorAll('.chip-select').forEach(group => {
+  group.querySelectorAll('.chip-opt').forEach(chip => {
+    chip.addEventListener('click', () => {
+      group.querySelectorAll('.chip-opt').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+    });
+  });
+});
+
+// Category change warning
+const catSelect = document.getElementById('category-select');
+const origCat = catSelect?.value;
+catSelect?.addEventListener('change', () => {
+  if (catSelect.value !== origCat) {
+    if (!confirm('⚠️ Changing category is a major edit. Continue?')) {
+      catSelect.value = origCat;
+    }
+  }
+});
+
+// Add specialty
+document.getElementById('add-specialty-btn')?.addEventListener('click', () => {
+  const container = document.getElementById('specialties-container');
+  const row = document.createElement('div');
+  row.className = 'specialty-form-row';
+  row.innerHTML = `
+    <input type="text" name="spec_name[]" class="form-input" placeholder="Name">
+    <input type="text" name="spec_description[]" class="form-input" placeholder="Description">
+    <select name="spec_category[]" class="form-select">
+      {% for code, label in specialty_categories %}
+      <option value="{{ code }}">{{ label }}</option>
+      {% endfor %}
+    </select>
+    <input type="text" name="spec_where[]" class="form-input" placeholder="Where to find">
+    <button type="button" class="btn btn-danger btn-sm" onclick="this.closest('.specialty-form-row').remove()">✕</button>
+  `;
+  container.appendChild(row);
+});
+
+// Map
+(function() {
+  const mapEl = document.getElementById('admin-map');
+  if (!mapEl || typeof L === 'undefined') return;
+  const lat = parseFloat(mapEl.dataset.lat) || 25.6;
+  const lng = parseFloat(mapEl.dataset.lng) || 85.1;
+  const map = L.map('admin-map').setView([lat, lng], lat ? 13 : 7);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {attribution:'© OSM'}).addTo(map);
+  let marker = lat ? L.marker([lat, lng]).addTo(map) : null;
+  map.on('click', (e) => {
+    if (marker) map.removeLayer(marker);
+    marker = L.marker(e.latlng).addTo(map);
+    document.getElementById('lat-input').value = e.latlng.lat.toFixed(6);
+    document.getElementById('lng-input').value = e.latlng.lng.toFixed(6);
+  });
+})();
+</script>
+{% endblock %}

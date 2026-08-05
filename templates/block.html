@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}{{ block.name }}, {{ district.name }} — {{ app_name }}{% endblock %}
+{% block meta_desc %}Explore places in {{ block.name }} block, {{ district.name }} district, {{ state.name }}. Find tourist spots, temples, and hidden gems.{% endblock %}
+
+{% block extra_css %}
+<style>
+.block-hero {
+  position: relative;
+  padding: 60px var(--space-lg) 40px;
+  background: linear-gradient(135deg, var(--bg-body) 0%, rgba(255,122,24,0.05) 100%);
+}
+.block-hero-content { max-width: 800px; margin: 0 auto; }
+.block-breadcrumb {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.78rem; color: var(--text-muted); margin-bottom: var(--space-md);
+}
+.block-breadcrumb a { color: var(--text-secondary); text-decoration: none; }
+.block-breadcrumb a:hover { color: var(--primary); }
+.block-hero h1 {
+  font-family: var(--font-heading); font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+  font-weight: 800; margin-bottom: var(--space-xs);
+}
+.block-hero-meta {
+  color: var(--text-muted); font-size: 0.9rem;
+  display: flex; gap: var(--space-md); flex-wrap: wrap;
+}
+.block-main {
+  max-width: 800px; margin: var(--space-xl) auto;
+  padding: 0 var(--space-lg) var(--space-3xl);
+}
+.block-places-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-lg);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="block-hero">
+  <div class="block-hero-content">
+    <div class="block-breadcrumb">
+      <a href="{{ url_for('main.index') }}">Home</a> /
+      <a href="{{ url_for('main.state_detail', slug=state.slug) }}">{{ state.name }}</a> /
+      <a href="{{ url_for('main.district_detail', state_slug=state.slug, district_slug=district.slug) }}">{{ district.name }}</a> /
+      <span>{{ block.name }}</span>
+    </div>
+    <h1>{{ block.name }} <span class="text-gradient-teal">Block</span></h1>
+    <div class="block-hero-meta">
+      <span>📍 {{ district.name }} District</span>
+      <span>🗺️ {{ state.name }}</span>
+      <span>🏛️ {{ places|length }} Places</span>
+    </div>
+  </div>
+</section>
+
+<div class="block-main">
+  {% if places %}
+  <div class="block-places-grid stagger-children">
+    {% for place in places %}
+    {% include "partials/place_card.html" %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <span class="empty-icon">🏘️</span>
+    <h3>No places listed in {{ block.name }} yet</h3>
+    <p>Know a hidden gem? <a href="{{ url_for('community.suggest_place') }}" style="color:var(--primary);">Suggest a place →</a></p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ app_name }} — Discover Bihar's Hidden Gems{% endblock %}</title>
+  <meta name="description" content="{% block meta_desc %}Discover Bihar's hidden gems, famous temples, local food, and tourist destinations. Your one-stop guide to exploring Bihar.{% endblock %}">
+  <meta name="theme-color" content="#0F172A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="HiddenYatra">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="{% block og_title %}{{ app_name }}{% endblock %}">
+  <meta property="og:description" content="Discover Bihar's hidden gems, famous temples, local food, and tourist destinations.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="{% block og_image %}/static/og-default.png{% endblock %}">
+  <meta property="og:site_name" content="{{ app_name }}">
+  {% block extra_meta %}{% endblock %}
+
+  <!-- PWA & Favicon -->
+  <link rel="manifest" href="/static/manifest.json">
+  <link rel="apple-touch-icon" href="/static/icon-192.png">
+  <link rel="icon" type="image/svg+xml" href="/static/logo-icon.svg">
+  <link rel="shortcut icon" href="/static/logo-icon.svg">
+
+  <!-- Performance: DNS Prefetch & Preconnect -->
+  <link rel="dns-prefetch" href="//fonts.googleapis.com">
+  <link rel="dns-prefetch" href="//fonts.gstatic.com">
+  <link rel="dns-prefetch" href="//unpkg.com">
+
+  <!-- Google Fonts — Poppins + Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS for Map Rendering -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- App CSS (Minified for Production) -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.min.css') }}?v=6">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.min.css') }}?v=6">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/animations.min.css') }}?v=6">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+  <!-- Skip Navigation (Accessibility) -->
+  <a href="#main-content" class="skip-link" style="position:absolute;top:-100%;left:50%;transform:translateX(-50%);padding:12px 24px;background:var(--primary);color:#fff;font-weight:600;border-radius:0 0 8px 8px;z-index:9999;transition:top .2s;">Skip to main content</a>
+  <style>.skip-link:focus{top:0;}</style>
+
+  <!-- Loading Bar -->
+  <div class="loading-bar" id="loading-bar" role="progressbar" aria-label="Page loading"></div>
+
+  <div class="app-shell">
+
+    <!-- ═══ NAVBAR ═══ -->
+    <nav class="navbar" id="navbar">
+      <div class="nav-container">
+
+        <!-- Logo -->
+        <a href="{{ url_for('main.index') }}" class="nav-logo">
+          <span class="nav-logo-icon">
+            <img src="{{ url_for('static', filename='logo-icon.svg') }}" alt="HiddenYatra Logo" width="30" height="30" style="display:block;">
+          </span>
+          <span class="nav-logo-text">Hidden<strong>Yatra</strong></span>
+        </a>
+
+        <!-- Search (reduced width) -->
+        <div class="nav-search" id="nav-search">
+          <form action="{{ url_for('main.search') }}" method="GET" class="nav-search-form">
+            <svg class="nav-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" name="q" placeholder="Search places, food..." class="nav-search-input" id="nav-search-input" autocomplete="off" value="{{ request.args.get('q', '') }}">
+          </form>
+          <div class="nav-autocomplete" id="nav-autocomplete"></div>
+        </div>
+
+        <!-- Main Navigation (5 core links + auth) -->
+        <div class="nav-links" id="nav-links">
+          <a href="{{ url_for('main.index') }}" class="nav-link {% if request.path == '/' %}active{% endif %}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            Home
+          </a>
+          <a href="{{ url_for('main.state_detail', slug='bihar') }}" class="nav-link {% if '/state/' in request.path or '/district/' in request.path %}active{% endif %}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            Districts
+          </a>
+          <a href="{{ url_for('main.food_culture') }}" class="nav-link {% if '/food' in request.path %}active{% endif %}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+            Food & Culture
+          </a>
+          <a href="{{ url_for('main.explore_map') }}" class="nav-link {% if '/explore' in request.path %}active{% endif %}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+            Map
+          </a>
+          <button class="nav-link" id="hy-loc-btn" onclick="HY.requestLocation()" style="background:none;border:none;cursor:pointer;font-family:inherit;font-size:inherit;color:var(--text-muted);" title="Enable location for nearby places & distance info">
+            📍 Location
+          </button>
+          <a href="{{ url_for('community.suggest_place') }}" class="nav-link nav-link-cta">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            Suggest
+          </a>
+
+          <!-- ═══ AUTH: Role-based visibility ═══ -->
+          {% if session.get('user_id') %}
+          <!-- LOGGED IN → Profile dropdown -->
+          <div class="nav-profile-dropdown" id="nav-profile-dropdown">
+            <button class="nav-profile-btn" id="profile-dropdown-btn" type="button">
+              <span class="nav-avatar">{{ session.get('user_emoji', '🧳') }}</span>
+              <span class="nav-profile-name">{{ session.get('user_name', 'Profile') }}</span>
+              <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="nav-dropdown-menu" id="profile-dropdown-menu">
+              <div class="dropdown-header">
+                <span style="font-size:1.5rem;">{{ session.get('user_emoji', '🧳') }}</span>
+                <div>
+                  <div class="dropdown-user-name">{{ session.get('user_name', 'User') }}</div>
+                  <div class="dropdown-user-role">{% if session.get('admin_logged_in') %}Admin{% else %}Explorer{% endif %}</div>
+                </div>
+              </div>
+              <div class="dropdown-divider"></div>
+              <a href="{{ url_for('auth.profile') }}" class="dropdown-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                My Profile
+              </a>
+              <a href="{{ url_for('community.my_submissions') }}" class="dropdown-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                My Submissions
+              </a>
+              <a href="{{ url_for('wishlist.wishlist_page') }}" class="dropdown-item">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+                Wishlist
+              </a>
+              {% if session.get('admin_logged_in') %}
+              <div class="dropdown-divider"></div>
+              <a href="{{ url_for('admin.dashboard') }}" class="dropdown-item dropdown-item-admin">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                Admin Dashboard
+              </a>
+              {% endif %}
+              <div class="dropdown-divider"></div>
+              <form method="POST" action="{{ url_for('auth.logout') }}" style="margin:0;">
+                {{ csrf_input() }}
+                <button type="submit" class="dropdown-item dropdown-item-danger" style="width:100%;text-align:left;background:none;border:none;cursor:pointer;font:inherit;color:inherit;display:flex;align-items:center;gap:8px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                  Logout
+                </button>
+              </form>
+            </div>
+          </div>
+          {% else %}
+          <!-- NOT LOGGED IN → Login -->
+          <a href="{{ url_for('auth.login') }}" class="nav-link nav-link-cta">Login</a>
+          {% endif %}
+
+          <!-- Theme toggle -->
+          <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Toggle Dark/Light Mode">
+            <svg class="theme-icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <svg class="theme-icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          </button>
+        </div>
+
+        <button class="nav-mobile-toggle" id="mobile-toggle" aria-label="Toggle menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- ═══ FLASH MESSAGES ═══ -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-container">
+      {% for category, message in messages %}
+      <div class="flash-message flash-{{ category }}">
+        {{ message }}
+        <button class="flash-close" onclick="this.parentElement.remove()">✕</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- ═══ MAIN CONTENT ═══ -->
+    <main class="main-content page-enter" id="main-content" role="main">
+      {% block content %}{% endblock %}
+    </main>
+
+    <!-- ═══ FOOTER ═══ -->
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-grid">
+          <div class="footer-brand-col">
+            <div class="footer-brand">
+              <span class="footer-logo-icon">
+                <img src="{{ url_for('static', filename='logo-icon.svg') }}" alt="HiddenYatra Logo" width="26" height="26" style="display:block;">
+              </span>
+              <span>Hidden<strong style="color:var(--primary);">Yatra</strong></span>
+            </div>
+            <p class="footer-tagline">Discover Bihar's Hidden Gems — One place at a time. Explore ancient temples, hidden waterfalls, local street food, and must-visit destinations.</p>
+          </div>
+          <div class="footer-links-col">
+            <h4>Explore</h4>
+            <a href="{{ url_for('main.index') }}">Home</a>
+            <a href="{{ url_for('main.state_detail', slug='bihar') }}">Bihar Districts</a>
+            <a href="{{ url_for('main.explore_map') }}">Explore Map</a>
+            <a href="{{ url_for('main.food_culture') }}">Food & Culture</a>
+          </div>
+          <div class="footer-links-col">
+            <h4>Community</h4>
+            <a href="{{ url_for('community.suggest_place') }}">Suggest a Place</a>
+            <a href="{{ url_for('wishlist.wishlist_page') }}">My Wishlist</a>
+            <a href="{{ url_for('auth.login') }}">Login</a>
+            <a href="{{ url_for('admin.login') }}">Admin Panel</a>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p>Made with <span class="heart">❤️</span> for Bihar</p>
+          <p class="footer-copy">&copy; 2026 HiddenYatra. Crafted for explorers of Bihar.</p>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Mobile Bottom Navigation -->
+  <nav class="mobile-bottom-nav">
+    <div class="mobile-bottom-nav-inner">
+      <a href="{{ url_for('main.index') }}" class="mobile-nav-item active">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Home
+      </a>
+      <a href="{{ url_for('main.explore_map') }}" class="mobile-nav-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+        Map
+      </a>
+      <a href="{{ url_for('community.suggest_place') }}" class="mobile-nav-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Add
+      </a>
+      <a href="{{ url_for('wishlist.wishlist_page') }}" class="mobile-nav-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+        Wishlist
+      </a>
+      <a href="{% if session.get('user_id') %}{{ url_for('auth.profile') }}{% else %}{{ url_for('auth.login') }}{% endif %}" class="mobile-nav-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        {% if session.get('user_id') %}Profile{% else %}Login{% endif %}
+      </a>
+    </div>
+  </nav>
+
+  <!-- Scroll to Top -->
+  <button class="scroll-top-btn" id="scroll-top-btn" aria-label="Scroll to top">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+  </button>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- App JS (Minified for Production) -->
+  <script src="{{ url_for('static', filename='js/app.min.js') }}?v=6"></script>
+  {% block extra_js %}{% endblock %}
+
+  <!-- ═══ LOCATION SYSTEM ═══ -->
+  <script>
+    window.HY = window.HY || {};
+
+    // Haversine distance (km)
+    HY.haversine = function(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    };
+
+    // Format distance
+    HY.formatDist = function(km) {
+      if (km < 1) return Math.round(km * 1000) + ' m';
+      if (km < 10) return km.toFixed(1) + ' km';
+      return Math.round(km) + ' km';
+    };
+
+    // Get stored location
+    HY.getLocation = function() {
+      const s = sessionStorage.getItem('hy_location');
+      return s ? JSON.parse(s) : null;
+    };
+
+    // Request location
+    HY.requestLocation = function(cb) {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition(
+        function(pos) {
+          const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          sessionStorage.setItem('hy_location', JSON.stringify(loc));
+          HY.userLoc = loc;
+          if (cb) cb(loc);
+          HY.showDistances();
+          // Notify other components
+          document.dispatchEvent(new CustomEvent('hy-location-updated', { detail: loc }));
+          // Update button
+          const btn = document.getElementById('hy-loc-btn');
+          if (btn) { btn.innerHTML = '📍 Located'; btn.style.color = 'var(--secondary)'; }
+        },
+        function() {
+          const btn = document.getElementById('hy-loc-btn');
+          if (btn) btn.innerHTML = '📍 Denied';
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    };
+
+    // Show distances on all place cards that have lat/lng
+    HY.showDistances = function() {
+      const loc = HY.userLoc || HY.getLocation();
+      if (!loc) return;
+      document.querySelectorAll('[data-lat][data-lng]').forEach(function(el) {
+        const lat = parseFloat(el.dataset.lat);
+        const lng = parseFloat(el.dataset.lng);
+        if (!lat || !lng) return;
+        const dist = HY.haversine(loc.lat, loc.lng, lat, lng);
+        // Add distance badge if not already added
+        if (!el.querySelector('.hy-dist-badge')) {
+          const badge = document.createElement('span');
+          badge.className = 'hy-dist-badge';
+          badge.textContent = HY.formatDist(dist);
+          badge.style.cssText = 'position:absolute;top:8px;left:8px;z-index:5;padding:3px 10px;border-radius:20px;font-size:0.7rem;font-weight:600;background:rgba(0,0,0,0.7);color:#00BFA6;backdrop-filter:blur(4px);';
+          el.style.position = 'relative';
+          el.appendChild(badge);
+        }
+      });
+    };
+
+    // Init: try to load cached location
+    (function() {
+      const cached = HY.getLocation();
+      if (cached) {
+        HY.userLoc = cached;
+        setTimeout(function() {
+          HY.showDistances();
+          document.dispatchEvent(new CustomEvent('hy-location-updated', { detail: cached }));
+        }, 500);
+      }
+    })();
+
+    window.addEventListener('load', function() {
+      var bar = document.getElementById('loading-bar');
+      if (bar) bar.classList.add('done');
+
+      // Register Service Worker
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/static/sw.js', { scope: '/' })
+          .catch(function() { /* SW registration failed, non-critical */ });
+      }
+
+      // Lazy load images that aren't in viewport
+      document.querySelectorAll('img[data-src]').forEach(function(img) {
+        if ('IntersectionObserver' in window) {
+          var io = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+              if (entry.isIntersecting) {
+                img.src = img.dataset.src;
+                img.removeAttribute('data-src');
+                io.unobserve(img);
+              }
+            });
+          }, { rootMargin: '200px' });
+          io.observe(img);
+        } else {
+          img.src = img.dataset.src;
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>

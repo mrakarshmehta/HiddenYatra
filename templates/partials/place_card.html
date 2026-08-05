@@ -1,0 +1,67 @@
+<a href="{{ url_for('places.place_detail', slug=place.slug) }}" class="place-card" id="place-{{ place.slug }}" role="article" aria-label="{{ place.name }}, {{ place.category | category_label }} in {{ place.district_name or 'Bihar' }}" {% if place.latitude and place.longitude %}data-lat="{{ place.latitude }}" data-lng="{{ place.longitude }}"{% endif %}>
+  <div class="place-card-img-wrap">
+    {% set fallback_img = url_for('static', filename='placeholder-place.svg') %}
+    {% if place.category == 'waterfall' %}{% set fallback_img = url_for('static', filename='placeholder-waterfall.svg') %}
+    {% elif place.category == 'temple' or place.category == 'religious' %}{% set fallback_img = url_for('static', filename='placeholder-temple.svg') %}
+    {% elif place.category == 'fort' or place.category == 'historical' %}{% set fallback_img = url_for('static', filename='placeholder-fort.svg') %}
+    {% elif place.category == 'nature' or place.category == 'hill_station' or place.category == 'park' or place.category == 'lake' or place.category == 'wildlife' %}{% set fallback_img = url_for('static', filename='placeholder-nature.svg') %}
+    {% endif %}
+    {% if place.cover_image %}
+    <img class="place-card-img lazy-image" src="{% if place.cover_image.startswith('http') %}{{ place.cover_image }}{% else %}{{ url_for('static', filename='uploads/places/' + place.cover_image) }}{% endif %}" alt="{{ place.name }}" loading="lazy" decoding="async" onload="this.classList.add('loaded')" onerror="this.onerror=null;this.src='{{ fallback_img }}';">
+    {% else %}
+    <img class="place-card-img loaded" src="{{ fallback_img }}" alt="{{ place.name }}" loading="lazy">
+    {% endif %}
+    <div class="place-card-overlay"></div>
+    <span class="place-card-badge">{{ place.category | category_label }}</span>
+    {% if place.is_hidden_gem is defined and place.is_hidden_gem %}
+    <span class="place-card-badge" style="background:rgba(139,92,246,0.9);top:auto;bottom:8px;left:8px;right:auto;">💎 Hidden Gem</span>
+    {% endif %}
+    {% if place.is_featured %}
+    <span class="place-card-featured">⭐ Featured</span>
+    {% endif %}
+    {% if place.view_count %}
+    <span class="place-card-views">👁️ {{ place.view_count }}</span>
+    {% endif %}
+  </div>
+  <div class="place-card-body">
+    <h3 class="place-card-title">{{ place.name }}</h3>
+    <p class="place-card-location">
+      📍 {{ place.state_name }}{% if place.district_name %}, {{ place.district_name }}{% endif %}
+    </p>
+
+    <!-- Meta Tags: Season & Budget -->
+    <div class="place-card-tags" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+      {% if place.best_season %}
+      <span class="place-card-tag" style="font-size:0.72rem;padding:3px 8px;background:rgba(0,191,166,0.12);color:var(--secondary);border:1px solid rgba(0,191,166,0.25);border-radius:12px;font-weight:500;">🌤️ {{ place.best_season }}</span>
+      {% elif place.best_time_to_visit %}
+      <span class="place-card-tag" style="font-size:0.72rem;padding:3px 8px;background:rgba(0,191,166,0.12);color:var(--secondary);border:1px solid rgba(0,191,166,0.25);border-radius:12px;font-weight:500;">🌤️ {{ place.best_time_to_visit | truncate_words(2) }}</span>
+      {% endif %}
+      {% if place.entry_fee %}
+      <span class="place-card-tag" style="font-size:0.72rem;padding:3px 8px;background:rgba(255,122,24,0.12);color:var(--primary-300);border:1px solid rgba(255,122,24,0.25);border-radius:12px;font-weight:500;">💰 {{ place.entry_fee | truncate_words(2) }}</span>
+      {% else %}
+      <span class="place-card-tag" style="font-size:0.72rem;padding:3px 8px;background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.25);border-radius:12px;font-weight:500;">💰 Budget Friendly</span>
+      {% endif %}
+    </div>
+
+    {% if place.description %}
+    <p class="place-card-desc">{{ place.description | truncate_words(14) }}</p>
+    {% endif %}
+
+    <div class="place-card-footer">
+      {% if place.avg_rating %}
+      <div class="place-card-rating" style="display:flex;align-items:center;gap:4px;font-weight:600;color:#FBBF24;font-size:0.85rem;">
+        ★ <span>{{ "%.1f" | format(place.avg_rating) }}</span>
+        {% if place.review_count %}<span style="color:var(--text-muted);font-weight:400;font-size:0.75rem;"> ({{ place.review_count }})</span>{% endif %}
+      </div>
+      {% else %}
+      <div class="place-card-rating" style="display:flex;align-items:center;gap:4px;font-weight:500;color:var(--text-muted);font-size:0.8rem;">
+        ★ <span>4.8</span> <span style="font-size:0.75rem;">(Top rated)</span>
+      </div>
+      {% endif %}
+      <span class="place-card-explore-btn" style="font-size:0.8rem;font-weight:600;color:var(--primary-300);display:inline-flex;align-items:center;gap:4px;transition:transform 0.3s ease;">
+        Explore <span class="arrow" style="transition:transform 0.3s;">→</span>
+      </span>
+    </div>
+  </div>
+</a>
+

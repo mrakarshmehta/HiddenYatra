@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}User Management — Admin{% endblock %}
+
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:var(--space-xl) var(--space-lg);">
+<div style="margin-bottom:var(--space-md);"><a href="{{ url_for('admin.dashboard') }}" style="color:var(--text-muted);font-size:0.85rem;">← Back to Dashboard</a></div>
+<div class="admin-header-row" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:var(--space-xl);">
+  <h1 style="font-family:var(--font-heading);font-size:1.5rem;">👥 User Management</h1>
+  <form method="GET" style="display:flex;gap:8px;">
+    <input type="text" name="q" value="{{ query }}" placeholder="Search users..." class="form-input" style="width:240px;">
+    <button type="submit" class="btn btn-primary" style="padding:8px 16px;">🔍</button>
+  </form>
+</div>
+
+<div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:var(--space-lg);">
+  Total: {{ users|length }} users
+  {% if query %} matching "{{ query }}"{% endif %}
+</div>
+
+<div class="table-container" style="overflow-x:auto;">
+  <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+    <thead>
+      <tr style="border-bottom:1px solid var(--border-color);text-align:left;">
+        <th style="padding:10px 8px;">User</th>
+        <th style="padding:10px 8px;">Email</th>
+        <th style="padding:10px 8px;">Status</th>
+        <th style="padding:10px 8px;">Verified</th>
+        <th style="padding:10px 8px;">Joined</th>
+        <th style="padding:10px 8px;">Last Login</th>
+        <th style="padding:10px 8px;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr style="border-bottom:1px solid var(--border-color);">
+        <td style="padding:10px 8px;">
+          <div style="font-weight:600;">{{ u.display_name or u.username }}</div>
+          <div style="font-size:0.75rem;color:var(--text-muted);">@{{ u.username }}</div>
+        </td>
+        <td style="padding:10px 8px;font-size:0.8rem;">{{ u.email }}</td>
+        <td style="padding:10px 8px;">
+          {% if u.status == 'active' %}
+          <span style="color:#10B981;font-weight:600;">✅ Active</span>
+          {% elif u.status == 'pending' %}
+          <span style="color:#F59E0B;font-weight:600;">⏳ Pending</span>
+          {% elif u.status == 'suspended' %}
+          <span style="color:#EF4444;font-weight:600;">⏸️ Suspended</span>
+          {% elif u.status == 'banned' %}
+          <span style="color:#EF4444;font-weight:600;">🚫 Banned</span>
+          {% else %}
+          <span style="color:var(--text-muted);">{{ u.status or 'unknown' }}</span>
+          {% endif %}
+        </td>
+        <td style="padding:10px 8px;">
+          {% if u.email_verified %}✅{% else %}❌{% endif %}
+        </td>
+        <td style="padding:10px 8px;font-size:0.78rem;color:var(--text-muted);">{{ u.created_at.strftime('%Y-%m-%d') if u.created_at else '-' }}</td>
+        <td style="padding:10px 8px;font-size:0.78rem;color:var(--text-muted);">{{ u.last_login.strftime('%Y-%m-%d %H:%M') if u.last_login else 'Never' }}</td>
+        <td style="padding:10px 8px;">
+          <div style="display:flex;gap:4px;flex-wrap:wrap;">
+            {% if u.status != 'active' %}
+            <form method="POST" action="{{ url_for('admin.change_user_status', user_id=u.id) }}" style="display:inline;">
+              {{ csrf_input() }}
+              <input type="hidden" name="status" value="active">
+              <button type="submit" class="btn" style="font-size:0.72rem;padding:4px 8px;background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);border-radius:6px;">Activate</button>
+            </form>
+            {% endif %}
+            {% if u.status != 'suspended' %}
+            <form method="POST" action="{{ url_for('admin.change_user_status', user_id=u.id) }}" style="display:inline;">
+              {{ csrf_input() }}
+              <input type="hidden" name="status" value="suspended">
+              <button type="submit" class="btn" style="font-size:0.72rem;padding:4px 8px;background:rgba(245,158,11,0.15);color:#F59E0B;border:1px solid rgba(245,158,11,0.3);border-radius:6px;">Suspend</button>
+            </form>
+            {% endif %}
+            {% if u.status != 'banned' %}
+            <form method="POST" action="{{ url_for('admin.change_user_status', user_id=u.id) }}" style="display:inline;">
+              {{ csrf_input() }}
+              <input type="hidden" name="status" value="banned">
+              <button type="submit" class="btn" style="font-size:0.72rem;padding:4px 8px;background:rgba(239,68,68,0.15);color:#EF4444;border:1px solid rgba(239,68,68,0.3);border-radius:6px;">Ban</button>
+            </form>
+            {% endif %}
+            <form method="POST" action="{{ url_for('admin.delete_user_view', user_id=u.id) }}" style="display:inline;" onsubmit="return confirm('Permanently delete this user?');">
+              {{ csrf_input() }}
+              <button type="submit" class="btn" style="font-size:0.72rem;padding:4px 8px;background:rgba(239,68,68,0.1);color:#EF4444;border:1px solid rgba(239,68,68,0.2);border-radius:6px;">Delete</button>
+            </form>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if not users %}
+      <tr>
+        <td colspan="7" style="padding:40px;text-align:center;color:var(--text-muted);">No users found.</td>
+      </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+</div>
+{% endblock %}

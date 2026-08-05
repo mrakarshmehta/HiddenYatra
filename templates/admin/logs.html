@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Admin Logs — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <div>
+      <h1 class="page-title">📋 Admin <span class="text-gradient-teal">Activity Log</span></h1>
+      <p class="page-subtitle">{{ logs | length }} actions recorded</p>
+    </div>
+    <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline">← Dashboard</a>
+  </div>
+</section>
+
+<section class="section" style="max-width:900px;margin:0 auto;">
+  {% if logs %}
+  <div style="display:flex;flex-direction:column;gap:var(--space-sm);">
+    {% for log in logs %}
+    <div style="display:flex;align-items:center;gap:var(--space-md);padding:var(--space-md);background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius-md);">
+      <span style="font-size:1.2rem;">
+        {% if log.action == 'approve' %}✅{% elif log.action == 'reject' %}❌{% elif log.action == 'merge' %}🔗{% elif log.action == 'replace' %}🔄{% elif log.action == 'edit' %}✏️{% elif log.action == 'delete' %}🗑️{% elif log.action == 'soft_delete' %}🗑️{% elif log.action == 'restore' %}♻️{% elif log.action == 'permanent_delete' %}💀{% else %}📝{% endif %}
+      </span>
+      <div style="flex:1;">
+        <span style="font-weight:600;text-transform:capitalize;">{{ log.action }}</span>
+        <span style="color:var(--text-muted);">{{ log.target_type }} #{{ log.target_id }}</span>
+        {% if log.details %}<span style="color:var(--text-secondary);font-size:0.85rem;"> — {{ log.details }}</span>{% endif %}
+      </div>
+      <span style="font-size:0.8rem;color:var(--text-muted);">{{ log.created_at.strftime('%Y-%m-%d %H:%M') if log.created_at else '' }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <span class="empty-icon">📋</span>
+    <h3>No admin actions logged yet</h3>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

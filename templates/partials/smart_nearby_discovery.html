@@ -1,0 +1,88 @@
+<!-- ═══ GOOGLE MAPS–STYLE SMART NEARBY DISCOVERY & ESSENTIALS PARTIAL ═══ -->
+<link rel="stylesheet" href="{{ url_for('static', filename='css/smart-nearby.css') }}?v=2">
+
+<div class="sn-discovery-wrapper" id="sn-discovery-container">
+  <!-- Top Control Bar: Radius & Quick Chips -->
+  <div style="padding: 12px 16px; background: var(--bg-card, rgba(30, 41, 59, 0.7)); border-bottom: 1px solid var(--sn-border); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;">
+    <!-- Radius Selector -->
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="font-size: 0.8rem; font-weight: 600; color: var(--sn-text-muted);">Radius:</span>
+      <div style="display: inline-flex; background: rgba(0, 0, 0, 0.2); padding: 3px; border-radius: 20px; border: 1px solid var(--sn-border);">
+        <button class="sn-radius-btn" data-radius="1" style="padding: 4px 12px; border-radius: 16px; font-size: 0.78rem; font-weight: 600; border: none; background: transparent; color: var(--sn-text); cursor: pointer;">1 km</button>
+        <button class="sn-radius-btn" data-radius="2" style="padding: 4px 12px; border-radius: 16px; font-size: 0.78rem; font-weight: 600; border: none; background: transparent; color: var(--sn-text); cursor: pointer;">2 km</button>
+        <button class="sn-radius-btn active" data-radius="5" style="padding: 4px 12px; border-radius: 16px; font-size: 0.78rem; font-weight: 600; border: none; background: var(--sn-primary, #6366f1); color: #fff; cursor: pointer;">5 km</button>
+        <button class="sn-radius-btn" data-radius="10" style="padding: 4px 12px; border-radius: 16px; font-size: 0.78rem; font-weight: 600; border: none; background: transparent; color: var(--sn-text); cursor: pointer;">10 km</button>
+      </div>
+    </div>
+
+    <!-- Quick Chips -->
+    <div style="display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none;">
+      <button class="sn-cat-chip" data-category="hotel">🏨 Hotels Near Me</button>
+      <button class="sn-cat-chip" data-category="hospital">🏥 Hospitals Near Me</button>
+      <button class="sn-cat-chip" data-category="petrol_pump">⛽ Petrol Pumps Near Me</button>
+      <button class="sn-cat-chip" data-category="restaurant">🍴 Restaurants Near Me</button>
+      <button class="sn-cat-chip" data-category="atm">🏧 ATMs Near Me</button>
+    </div>
+  </div>
+
+  <!-- Full Category Chip Bar -->
+  <div class="sn-category-bar">
+    <button class="sn-cat-chip active" data-category="">All Essentials</button>
+    <button class="sn-cat-chip" data-category="hotel">🏨 Hotel</button>
+    <button class="sn-cat-chip" data-category="hospital">🏥 Hospital</button>
+    <button class="sn-cat-chip" data-category="petrol_pump">⛽ Petrol Pump</button>
+    <button class="sn-cat-chip" data-category="restaurant">🍴 Restaurant</button>
+    <button class="sn-cat-chip" data-category="pharmacy">💊 Pharmacy</button>
+    <button class="sn-cat-chip" data-category="atm">🏧 ATM</button>
+    <button class="sn-cat-chip" data-category="police_station">🚓 Police Station</button>
+    <button class="sn-cat-chip" data-category="bus_stand">🚌 Bus Stand</button>
+    <button class="sn-cat-chip" data-category="railway_station">🚂 Railway Station</button>
+    <button class="sn-cat-chip" data-category="ev_charging">⚡ EV Charging</button>
+    <button class="sn-cat-chip" data-category="tourist_place">📍 Tourist Place</button>
+  </div>
+
+  <!-- Main Discovery Split View -->
+  <div class="sn-discovery-layout split-view">
+    <!-- Results Sidebar -->
+    <div class="sn-results-sidebar">
+      <div class="sn-results-header">
+        <div class="sn-results-title">
+          🧭 Nearby Essentials
+          <span class="sn-results-count" id="sn-results-count">0</span>
+        </div>
+        <div style="font-size:0.78rem;color:var(--text-muted);">Sorted nearest first</div>
+      </div>
+
+      <!-- Results Cards Stack -->
+      <div class="sn-cards-stack" id="sn-cards-stack">
+        <!-- Skeleton Loaders -->
+        <div class="sn-skeleton-card">
+          <div class="sn-skeleton-line" style="width:60%;"></div>
+          <div class="sn-skeleton-line" style="width:85%;"></div>
+          <div class="sn-skeleton-line" style="width:40%;"></div>
+        </div>
+        <div class="sn-skeleton-card">
+          <div class="sn-skeleton-line" style="width:50%;"></div>
+          <div class="sn-skeleton-line" style="width:75%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Map Canvas -->
+    <div style="position:relative;height:100%;">
+      <div id="sn-map-canvas" class="sn-map-canvas"></div>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/smart-nearby.js') }}?v=2"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.SNS) {
+      SNS.init({
+        containerId: 'sn-discovery-container',
+        mapId: 'sn-map-canvas'
+      });
+    }
+  });
+</script>

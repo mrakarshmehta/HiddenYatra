@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Review: {{ sub.place_name }} — Admin — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-md);">
+    <div>
+      <h1 class="page-title">Review <span class="text-gradient-saffron">Submission</span></h1>
+      <p class="page-subtitle">ID #{{ sub.id }} — {{ sub.status | upper }}</p>
+    </div>
+    <a href="{{ url_for('admin.submissions') }}" class="btn btn-outline">← All Submissions</a>
+  </div>
+</section>
+
+<section class="section" style="max-width:1000px;margin:0 auto;">
+
+  <!-- Duplicate Warning -->
+  {% if dup_places %}
+  <div style="background:rgba(250,204,21,0.08);border:1px solid rgba(250,204,21,0.3);border-radius:var(--radius-xl);padding:var(--space-xl);margin-bottom:var(--space-xl);">
+    <h3 style="color:var(--gold);margin-bottom:var(--space-md);">⚠️ Possible Duplicates Found</h3>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-lg);">
+      <!-- Submission -->
+      <div style="background:var(--bg-card);border-radius:var(--radius-lg);padding:var(--space-lg);border:2px solid var(--saffron);">
+        <p style="font-size:0.75rem;color:var(--saffron);text-transform:uppercase;font-weight:600;margin-bottom:var(--space-sm);">New Submission</p>
+        <h4>{{ sub.place_name }}</h4>
+        <p style="font-size:0.85rem;color:var(--text-muted);">📍 {{ sub.district_name or 'N/A' }}</p>
+        <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:var(--space-sm);">{{ sub.description[:150] }}{% if sub.description and sub.description|length > 150 %}...{% endif %}</p>
+        {% if sub.latitude %}<p style="font-size:0.8rem;color:var(--text-muted);margin-top:var(--space-sm);">📌 {{ "%.4f"|format(sub.latitude) }}, {{ "%.4f"|format(sub.longitude) }}</p>{% endif %}
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-top:var(--space-sm);">👤 {{ sub.submitter_name or 'Anonymous' }}</p>
+      </div>
+
+      <!-- Existing Match -->
+      {% for dp in dup_places[:1] %}
+      <div style="background:var(--bg-card);border-radius:var(--radius-lg);padding:var(--space-lg);border:2px solid var(--border-color);">
+        <p style="font-size:0.75rem;color:var(--text-muted);text-transform:uppercase;font-weight:600;margin-bottom:var(--space-sm);">Existing Place — {{ dp.match_reason | replace('_', ' ') | title }}</p>
+        <h4>{{ dp.name }}</h4>
+        <p style="font-size:0.85rem;color:var(--text-muted);">📍 {{ dp.district_name or dp.state_name or 'N/A' }}</p>
+        <p style="font-size:0.85rem;color:var(--text-secondary);margin-top:var(--space-sm);">{{ dp.description[:150] if dp.description else 'No description' }}{% if dp.description and dp.description|length > 150 %}...{% endif %}</p>
+        {% if dp.latitude %}<p style="font-size:0.8rem;color:var(--text-muted);margin-top:var(--space-sm);">📌 {{ "%.4f"|format(dp.latitude) }}, {{ "%.4f"|format(dp.longitude) }}</p>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <div style="display:flex;gap:var(--space-sm);margin-top:var(--space-lg);flex-wrap:wrap;">
+      {% for dp in dup_places[:1] %}
+      <form method="POST" action="{{ url_for('admin.replace_place') }}">
+{{ csrf_input() }}
+        <input type="hidden" name="place_id" value="{{ dp.id }}">
+        <input type="hidden" name="sub_id" value="{{ sub.id }}">
+        <button type="submit" class="btn btn-sm btn-outline" onclick="return confirm('Replace existing place with this submission data?')">🔄 Replace Existing</button>
+      </form>
+      {% endfor %}
+      <form method="POST" action="{{ url_for('admin.reject_sub', sub_id=sub.id) }}">
+{{ csrf_input() }}
+        <input type="hidden" name="admin_notes" value="Rejected: Duplicate of existing place">
+        <button type="submit" class="btn btn-sm btn-outline" style="color:var(--rose);">❌ Reject as Duplicate</button>
+      </form>
+      <form method="POST" action="{{ url_for('admin.approve_sub', sub_id=sub.id) }}">
+{{ csrf_input() }}
+        <input type="hidden" name="admin_notes" value="Approved as separate place">
+        <button type="submit" class="btn btn-sm btn-primary">✅ Approve as New</button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Duplicate Submissions -->
+  {% if dup_subs %}
+  <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.3);border-radius:var(--radius-xl);padding:var(--space-xl);margin-bottom:var(--space-xl);">
+    <h3 style="color:var(--indigo);margin-bottom:var(--space-md);">🔗 Similar Submissions</h3>
+    {% for ds in dup_subs %}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:var(--space-sm) 0;border-bottom:1px solid rgba(99,102,241,0.1);">
+      <span><strong>{{ ds.place_name }}</strong> — {{ ds.status }} — by {{ ds.submitter_name or 'Anonymous' }}</span>
+      {% if ds.status == 'pending' %}
+      <form method="POST" action="{{ url_for('admin.merge_subs') }}">
+{{ csrf_input() }}
+        <input type="hidden" name="keep_id" value="{{ sub.id }}">
+        <input type="hidden" name="merge_id" value="{{ ds.id }}">
+        <button type="submit" class="btn btn-sm btn-outline" onclick="return confirm('Merge #{{ ds.id }} into #{{ sub.id }}?')">🔗 Merge Into This</button>
+      </form>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Edit Before Approve Form -->
+  <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-xl);padding:var(--space-xl);margin-bottom:var(--space-xl);">
+    <h3 style="font-family:var(--font-heading);margin-bottom:var(--space-lg);">✏️ Edit & Review</h3>
+
+    <form method="POST" action="{{ url_for('admin.edit_sub', sub_id=sub.id) }}">
+{{ csrf_input() }}
+      <div class="form-row" style="margin-bottom:var(--space-md);">
+        <div class="form-group">
+          <label>Place Name</label>
+          <input type="text" name="place_name" value="{{ sub.place_name }}" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label>District</label>
+          <select name="district_name" class="form-input">
+            <option value="">Select</option>
+            {% for d in districts %}
+            <option value="{{ d.name }}" {% if d.name == sub.district_name %}selected{% endif %}>{{ d.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:var(--space-md);">
+        <label>Description</label>
+        <textarea name="description" class="form-textarea" rows="5">{{ sub.description }}</textarea>
+      </div>
+
+      <div class="form-row" style="margin-bottom:var(--space-md);">
+        <div class="form-group">
+          <label>Category</label>
+          <select name="category" class="form-input">
+            {% for code, label in categories %}
+            <option value="{{ code }}" {% if sub.category == code %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Best Time to Visit</label>
+          <input type="text" name="best_time_to_visit" value="{{ sub.best_time_to_visit or '' }}" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>Entry Fee</label>
+          <input type="text" name="entry_fee" value="{{ sub.entry_fee or '' }}" class="form-input">
+        </div>
+      </div>
+
+      <div class="form-row" style="margin-bottom:var(--space-lg);">
+        <div class="form-group">
+          <label>Latitude</label>
+          <input type="number" step="any" name="latitude" value="{{ sub.latitude or '' }}" class="form-input">
+        </div>
+        <div class="form-group">
+          <label>Longitude</label>
+          <input type="number" step="any" name="longitude" value="{{ sub.longitude or '' }}" class="form-input">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:var(--space-sm);">
+        <button type="submit" class="btn btn-primary">💾 Save Edits</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Additional Info -->
+  {% if sub.local_tips or sub.nearby_food or sub.nearby_stay %}
+  <div style="background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-xl);padding:var(--space-xl);margin-bottom:var(--space-xl);">
+    <h3 style="font-family:var(--font-heading);margin-bottom:var(--space-lg);">📋 Additional Details</h3>
+    {% if sub.crowd_level %}<p><strong>Crowd:</strong> {{ sub.crowd_level }}</p>{% endif %}
+    {% if sub.safety_level %}<p><strong>Safety:</strong> {{ sub.safety_level }}</p>{% endif %}
+    {% if sub.local_tips %}<p style="margin-top:var(--space-sm);"><strong>Local Tips:</strong> {{ sub.local_tips }}</p>{% endif %}
+    {% if sub.nearby_food %}<p style="margin-top:var(--space-sm);"><strong>Nearby Food:</strong> {{ sub.nearby_food }}</p>{% endif %}
+    {% if sub.nearby_stay %}<p style="margin-top:var(--space-sm);"><strong>Nearby Stay:</strong> {{ sub.nearby_stay }}</p>{% endif %}
+  </div>
+  {% endif %}
+
+  <!-- Final Actions -->
+  {% if sub.status == 'pending' %}
+  <div style="display:flex;gap:var(--space-md);justify-content:center;padding:var(--space-xl) 0;">
+    <form method="POST" action="{{ url_for('admin.approve_sub', sub_id=sub.id) }}">
+{{ csrf_input() }}
+      <input type="text" name="admin_notes" placeholder="Admin note (optional)" class="form-input" style="width:200px;display:inline-block;margin-right:8px;padding:8px 12px;">
+      <button type="submit" class="btn btn-primary btn-lg">✅ Approve & Publish</button>
+    </form>
+    <form method="POST" action="{{ url_for('admin.reject_sub', sub_id=sub.id) }}">
+{{ csrf_input() }}
+      <button type="submit" class="btn btn-outline btn-lg" style="color:var(--rose);">❌ Reject</button>
+    </form>
+    <form method="POST" action="{{ url_for('admin.delete_sub', sub_id=sub.id) }}">
+{{ csrf_input() }}
+      <button type="submit" class="btn btn-outline btn-lg" style="color:var(--rose);" onclick="return confirm('Permanently delete this submission?')">🗑️ Delete</button>
+    </form>
+  </div>
+  {% endif %}
+
+</section>
+{% endblock %}

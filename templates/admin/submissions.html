@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Submissions — Admin — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="page-header">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:var(--space-md);">
+    <div>
+      <h1 class="page-title">📝 Community <span class="text-gradient-saffron">Submissions</span></h1>
+      <p class="page-subtitle">{{ submissions | length }} submissions</p>
+    </div>
+    <div style="display:flex;gap:var(--space-sm);flex-wrap:wrap;">
+      <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline">← Dashboard</a>
+      <a href="{{ url_for('admin.admin_logs') }}" class="btn btn-outline">📋 Logs</a>
+    </div>
+  </div>
+</section>
+
+<!-- Filters -->
+<section style="max-width:1200px;margin:0 auto;padding:0 var(--space-lg);">
+  <div style="display:flex;gap:var(--space-sm);flex-wrap:wrap;margin-bottom:var(--space-xl);">
+    <a href="{{ url_for('admin.submissions') }}" class="btn btn-sm {% if not current_filter and not show_duplicates %}btn-primary{% else %}btn-outline{% endif %}">All</a>
+    <a href="{{ url_for('admin.submissions', status='pending') }}" class="btn btn-sm {% if current_filter == 'pending' %}btn-primary{% else %}btn-outline{% endif %}">🟡 Pending</a>
+    <a href="{{ url_for('admin.submissions', status='approved') }}" class="btn btn-sm {% if current_filter == 'approved' %}btn-primary{% else %}btn-outline{% endif %}">✅ Approved</a>
+    <a href="{{ url_for('admin.submissions', status='rejected') }}" class="btn btn-sm {% if current_filter == 'rejected' %}btn-primary{% else %}btn-outline{% endif %}">❌ Rejected</a>
+    <a href="{{ url_for('admin.submissions', status='merged') }}" class="btn btn-sm {% if current_filter == 'merged' %}btn-primary{% else %}btn-outline{% endif %}">🔗 Merged</a>
+    <a href="{{ url_for('admin.submissions', duplicates='1') }}" class="btn btn-sm {% if show_duplicates %}btn-primary{% else %}btn-outline{% endif %}" style="{% if show_duplicates %}background:var(--gold);color:#000;{% endif %}">⚠️ Duplicates Only</a>
+  </div>
+</section>
+
+<section class="section" style="max-width:1200px;margin:0 auto;">
+  {% if submissions %}
+  <div style="display:flex;flex-direction:column;gap:var(--space-lg);">
+    {% for sub in submissions %}
+    <div class="step-card" style="{% if sub.has_duplicates %}border-color:rgba(250,204,21,0.5);box-shadow:0 0 12px rgba(250,204,21,0.1);{% elif sub.status == 'rejected' %}opacity:0.6;{% elif sub.status == 'merged' %}opacity:0.5;border-style:dashed;{% endif %}">
+
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:var(--space-md);margin-bottom:var(--space-md);">
+        <div>
+          <h3 style="font-family:var(--font-heading);font-size:1.15rem;font-weight:700;">
+            <a href="{{ url_for('admin.submission_detail', sub_id=sub.id) }}" style="color:var(--text-primary);">{{ sub.place_name }}</a>
+          </h3>
+          {% if sub.district_name %}<p style="color:var(--text-muted);font-size:0.85rem;">📍 {{ sub.district_name }}, Bihar</p>{% endif %}
+        </div>
+        <div style="display:flex;gap:var(--space-sm);align-items:center;">
+          {% if sub.has_duplicates %}
+          <span style="padding:3px 10px;border-radius:var(--radius-full);background:rgba(250,204,21,0.15);color:var(--gold);font-size:0.75rem;font-weight:600;">⚠️ POSSIBLE DUPLICATE</span>
+          {% endif %}
+          <span style="padding:3px 10px;border-radius:var(--radius-full);font-size:0.75rem;font-weight:600;
+            {% if sub.status == 'pending' %}background:rgba(250,204,21,0.15);color:var(--gold);
+            {% elif sub.status == 'approved' %}background:rgba(16,185,129,0.15);color:var(--emerald);
+            {% elif sub.status == 'rejected' %}background:rgba(244,63,94,0.15);color:var(--rose);
+            {% elif sub.status == 'merged' %}background:rgba(99,102,241,0.15);color:var(--indigo);
+            {% endif %}">{{ sub.status | upper }}</span>
+        </div>
+      </div>
+
+      <!-- Description -->
+      {% if sub.description %}
+      <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:var(--space-md);line-height:1.6;">{{ sub.description[:200] }}{% if sub.description|length > 200 %}...{% endif %}</p>
+      {% endif %}
+
+      <!-- Meta -->
+      <div style="display:flex;gap:var(--space-lg);flex-wrap:wrap;font-size:0.8rem;color:var(--text-muted);margin-bottom:var(--space-md);">
+        <span>👤 {{ sub.submitter_name or 'Anonymous' }}</span>
+        <span>📂 {{ sub.category }}</span>
+        {% if sub.latitude and sub.longitude %}<span>📌 {{ "%.4f"|format(sub.latitude) }}, {{ "%.4f"|format(sub.longitude) }}</span>{% endif %}
+        <span>📅 {{ sub.created_at.strftime('%Y-%m-%d') if sub.created_at else '' }}</span>
+      </div>
+
+      <!-- Duplicate Warning -->
+      {% if sub.duplicate_places %}
+      <div style="background:rgba(250,204,21,0.08);border:1px solid rgba(250,204,21,0.2);border-radius:var(--radius-md);padding:var(--space-md);margin-bottom:var(--space-md);">
+        <p style="font-size:0.85rem;font-weight:600;color:var(--gold);margin-bottom:var(--space-sm);">⚠️ Similar existing places found:</p>
+        {% for dp in sub.duplicate_places[:3] %}
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(250,204,21,0.1);">
+          <span style="font-size:0.85rem;">
+            <strong>{{ dp.name }}</strong>
+            <span style="color:var(--text-muted);">— {{ dp.match_reason | replace('_', ' ') | title }}</span>
+          </span>
+          <form method="POST" action="{{ url_for('admin.replace_place') }}" style="display:inline;">
+{{ csrf_input() }}
+            <input type="hidden" name="place_id" value="{{ dp.id }}">
+            <input type="hidden" name="sub_id" value="{{ sub.id }}">
+            <button type="submit" class="btn btn-sm btn-outline" onclick="return confirm('Replace existing place data with this submission?')" style="font-size:0.7rem;">🔄 Replace</button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% if sub.admin_notes %}
+      <p style="font-size:0.8rem;color:var(--teal);margin-bottom:var(--space-md);">💬 Admin: {{ sub.admin_notes }}</p>
+      {% endif %}
+
+      <!-- Actions -->
+      {% if sub.status == 'pending' %}
+      <div style="display:flex;gap:var(--space-sm);flex-wrap:wrap;padding-top:var(--space-md);border-top:1px solid var(--border-light);">
+        <a href="{{ url_for('admin.submission_detail', sub_id=sub.id) }}" class="btn btn-sm btn-outline">👁️ Review</a>
+        <form method="POST" action="{{ url_for('admin.approve_sub', sub_id=sub.id) }}" style="display:inline;">
+{{ csrf_input() }}
+          <button type="submit" class="btn btn-sm btn-primary">✅ Approve</button>
+        </form>
+        <form method="POST" action="{{ url_for('admin.reject_sub', sub_id=sub.id) }}" style="display:inline;">
+{{ csrf_input() }}
+          <input type="hidden" name="admin_notes" value="Duplicate or low quality">
+          <button type="submit" class="btn btn-sm btn-outline">❌ Reject</button>
+        </form>
+        <form method="POST" action="{{ url_for('admin.delete_sub', sub_id=sub.id) }}" style="display:inline;">
+{{ csrf_input() }}
+          <button type="submit" class="btn btn-sm btn-outline" style="color:var(--rose);border-color:rgba(244,63,94,0.3);" onclick="return confirm('Are you sure you want to delete this submission permanently?')">🗑️ Delete</button>
+        </form>
+      </div>
+      {% elif sub.status == 'approved' %}
+      <div style="display:flex;gap:var(--space-sm);padding-top:var(--space-md);border-top:1px solid var(--border-light);">
+        <form method="POST" action="{{ url_for('admin.delete_sub', sub_id=sub.id) }}" style="display:inline;">
+{{ csrf_input() }}
+          <button type="submit" class="btn btn-sm btn-outline" style="color:var(--rose);" onclick="return confirm('Delete this submission?')">🗑️ Delete</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <span class="empty-icon">📝</span>
+    <h3>No submissions found</h3>
+    <p>{% if current_filter %}No {{ current_filter }} submissions.{% else %}Community submissions will appear here.{% endif %}</p>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

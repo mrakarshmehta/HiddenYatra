@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Admin Login — {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="auth-page">
+  <div class="auth-card">
+      <div class="auth-brand" style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:var(--space-md);">
+        <img src="{{ url_for('static', filename='logo-icon.svg') }}" alt="HiddenYatra Logo" width="36" height="36" style="display:block;">
+        <span style="font-family:var(--font-heading);font-size:1.5rem;font-weight:700;color:var(--text-primary);">Hidden<strong style="color:var(--primary);">Yatra</strong></span>
+      </div>
+      <h1>Admin Access</h1>
+      <p>Enter password to manage HiddenYatra</p>
+    </div>
+    <form method="POST" class="auth-form">
+      {{ csrf_input() }}
+      <div class="form-group">
+        <label for="password">Admin Password</label>
+        <input type="password" name="password" id="password" placeholder="Enter admin password" class="form-input" required autofocus>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">Login to Dashboard</button>
+    </form>
+    <div class="auth-footer">
+      <a href="{{ url_for('main.index') }}">← Back to exploring</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

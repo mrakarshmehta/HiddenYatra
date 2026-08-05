@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Too Many Requests — {{ app_name }}{% endblock %}
+
+{% block content %}
+<div style="min-height:60vh;display:flex;align-items:center;justify-content:center;padding:var(--space-xl);">
+  <div style="text-align:center;max-width:500px;">
+    <div style="font-size:5rem;margin-bottom:var(--space-md);">⏳</div>
+    <h1 style="font-family:var(--font-heading);font-size:2rem;margin-bottom:var(--space-sm);">
+      Slow <span class="text-gradient-saffron">Down</span>, Explorer!
+    </h1>
+    <p style="color:var(--text-muted);font-size:0.95rem;margin-bottom:var(--space-xl);line-height:1.6;">
+      You've made too many requests in a short time. Please wait a moment and try again.
+    </p>
+    <div style="display:flex;gap:var(--space-md);justify-content:center;flex-wrap:wrap;">
+      <a href="{{ url_for('main.index') }}" class="btn btn-primary btn-lg">🏠 Go Home</a>
+      <a href="{{ url_for('main.explore_map') }}" class="btn btn-outline btn-lg">🗺️ Explore Map</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

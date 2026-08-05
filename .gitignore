@@ -1,0 +1,50 @@
+# Environment & Secrets
+.env
+*.env.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# Database
+*.db
+*.sqlite3
+
+# Uploads (keep structure, ignore content)
+static/uploads/places/*
+!static/uploads/places/.gitkeep
+static/uploads/submissions/*
+!static/uploads/submissions/.gitkeep
+static/uploads/auth/*
+!static/uploads/auth/.gitkeep
+static/hero/*
+!static/hero/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Gemini & IDE
+.gemini/
+.agents/
+
+# Database Data & Temp
+mysql_data/
+scratch/
+.tempmediaStorage/
+
+# Temp/test files
+_*.py

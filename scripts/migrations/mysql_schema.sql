@@ -346,7 +346,7 @@ CREATE TABLE IF NOT EXISTS admin_logs (
     action VARCHAR(100) NOT NULL,
     target_type VARCHAR(50) NOT NULL DEFAULT 'submission',
     target_id INT UNSIGNED DEFAULT NULL,
-    details TEXT NOT NULL DEFAULT (''),
+    details TEXT,
     admin_user VARCHAR(100) NOT NULL DEFAULT 'admin',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_admin_logs_action (action),

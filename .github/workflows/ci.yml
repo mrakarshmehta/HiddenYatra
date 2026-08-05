@@ -51,6 +51,7 @@ jobs:
           DB_USER: root
           DB_PASSWORD: root
           SECRET_KEY: test-ci-secret-key-for-github-actions
+          ADMIN_PASSWORD: admin@hidden123
           FLASK_ENV: testing
           TESTING: "True"
         run: |

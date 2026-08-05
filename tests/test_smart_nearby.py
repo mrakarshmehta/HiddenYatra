@@ -16,9 +16,68 @@ from models.database import (
 class TestSmartNearby(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.app = create_app()
-        cls.app.config['TESTING'] = True
-        cls.client = cls.app.test_client()
+        try:
+            cls.app = create_app()
+            cls.app.config['TESTING'] = True
+            cls.client = cls.app.test_client()
+        except Exception:
+            cls.app = None
+            cls.client = None
+            return
+
+        try:
+            from models.database import get_db, init_db
+            init_db()
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute("SELECT COUNT(*) AS cnt FROM places")
+            row_p = cur.fetchone()
+            p_cnt = row_p['cnt'] if row_p else 0
+
+            cur.execute("SELECT COUNT(*) AS cnt FROM nearby_services")
+            row_e = cur.fetchone()
+            e_cnt = row_e['cnt'] if row_e else 0
+
+            if p_cnt == 0 or e_cnt < 10:
+                cls._seed_ci_test_data(conn)
+
+            conn.close()
+        except Exception:
+            pass
+
+    @classmethod
+    def _seed_ci_test_data(cls, conn):
+        """Seeds minimal test state, district, place, and 10 essential services for CI runs."""
+        try:
+            cur = conn.cursor()
+            cur.execute("INSERT IGNORE INTO states (id, name, slug) VALUES (1, 'Bihar', 'bihar')")
+            cur.execute("INSERT IGNORE INTO districts (id, state_id, name, slug) VALUES (1, 1, 'Patna', 'patna')")
+            cur.execute("""
+                INSERT IGNORE INTO places (id, state_id, district_id, name, slug, category, latitude, longitude)
+                VALUES (1, 1, 1, 'Golghar', 'golghar', 'tourist_spot', 25.5941000, 85.1376000)
+            """)
+
+            test_services = [
+                (1, 'CI Test Hotel', 'hotel', 'Patna', 25.5945, 85.1378),
+                (1, 'CI Test Hospital', 'hospital', 'Patna', 25.5950, 85.1380),
+                (1, 'CI Test Petrol Pump', 'petrol_pump', 'Patna', 25.5955, 85.1382),
+                (1, 'CI Test Pharmacy', 'pharmacy', 'Patna', 25.5960, 85.1384),
+                (1, 'CI Test Restaurant', 'restaurant', 'Patna', 25.5965, 85.1386),
+                (1, 'CI Test ATM', 'atm', 'Patna', 25.5970, 85.1388),
+                (1, 'CI Test Police Station', 'police_station', 'Patna', 25.5975, 85.1390),
+                (1, 'CI Test Bus Stand', 'bus_stand', 'Patna', 25.5980, 85.1392),
+                (1, 'CI Test Railway Station', 'railway_station', 'Patna', 25.5985, 85.1394),
+                (1, 'CI Test Parking', 'parking', 'Patna', 25.5990, 85.1396),
+            ]
+
+            for dist_id, s_name, s_type, addr, s_lat, s_lng in test_services:
+                cur.execute("""
+                    INSERT IGNORE INTO nearby_services (district_id, name, service_type, address, latitude, longitude, is_active)
+                    VALUES (%s, %s, %s, %s, %s, %s, 1)
+                """, (dist_id, s_name, s_type, addr, s_lat, s_lng))
+            conn.commit()
+        except Exception:
+            conn.rollback()
 
     def test_compute_travel_metrics(self):
         """Test Haversine distance and walking/driving time calculations."""

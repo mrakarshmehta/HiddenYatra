@@ -749,6 +749,12 @@ _NEARBY_CACHE_TTL = 600  # 10 minutes cache TTL
 
 def fetch_overpass_nearby(lat, lng, radius_km=5.0, category=None):
     """Fetch nearby essentials from OpenStreetMap Overpass API with a strict 3-second timeout."""
+    from flask import has_app_context, current_app
+    if os.environ.get('FLASK_ENV') == 'testing' or os.environ.get('TESTING') == 'True':
+        return []
+    if has_app_context() and current_app.config.get('TESTING'):
+        return []
+
     import urllib.request
     import urllib.parse
     import json

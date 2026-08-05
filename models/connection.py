@@ -167,9 +167,8 @@ def init_db():
                     continue
                 try:
                     cur.execute(stmt)
-                except pymysql.Error as e:
-                    if e.args[0] not in (1050, 1061, 1062):
-                        logger.warning("Schema statement warning: %s", e)
+                except Exception as e:
+                    logger.warning("Schema statement skipped/warning: %s", e)
             conn.commit()
             logger.info("MySQL schema created successfully from %s", schema_path)
         else:

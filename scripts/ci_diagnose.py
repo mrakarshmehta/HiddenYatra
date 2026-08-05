@@ -4,6 +4,7 @@ Runs DB connection check, schema initialization, and test suite execution with d
 """
 import os
 import sys
+import time
 import traceback
 
 def log_summary(text):
@@ -23,21 +24,31 @@ def main():
     log_summary(f"- **DB_NAME**: `{os.environ.get('DB_NAME')}`")
     log_summary(f"- **DB_USER**: `{os.environ.get('DB_USER')}`")
 
-    # Test 1: Direct PyMySQL connection
-    try:
-        import pymysql
-        conn = pymysql.connect(
-            host=os.environ.get("DB_HOST", "127.0.0.1"),
-            port=int(os.environ.get("DB_PORT", 3306)),
-            user=os.environ.get("DB_USER", "root"),
-            password=os.environ.get("DB_PASSWORD", "root"),
-            database=os.environ.get("DB_NAME", "hiddenyatra_db"),
-            connect_timeout=10
-        )
-        log_summary("✅ **[CHECK 1] Direct PyMySQL Connection**: SUCCESS")
-        conn.close()
-    except Exception as e:
-        log_summary(f"❌ **[CHECK 1] Direct PyMySQL Connection**: FAILED -> `{e}`")
+    # Test 1: Direct PyMySQL connection (with retry for CI startup delay)
+    connected = False
+    last_error = None
+    for attempt in range(1, 16):
+        try:
+            import pymysql
+            conn = pymysql.connect(
+                host=os.environ.get("DB_HOST", "127.0.0.1"),
+                port=int(os.environ.get("DB_PORT", 3306)),
+                user=os.environ.get("DB_USER", "root"),
+                password=os.environ.get("DB_PASSWORD", "root"),
+                database=os.environ.get("DB_NAME", "hiddenyatra_db"),
+                connect_timeout=3
+            )
+            conn.close()
+            connected = True
+            log_summary(f"✅ **[CHECK 1] Direct PyMySQL Connection**: SUCCESS (Attempt {attempt})")
+            break
+        except Exception as e:
+            last_error = e
+            log_summary(f"⏳ Attempt {attempt}/15: MySQL not ready yet ({e}), retrying in 2s...")
+            time.sleep(2)
+
+    if not connected:
+        log_summary(f"❌ **[CHECK 1] Direct PyMySQL Connection**: FAILED after 15 attempts -> `{last_error}`")
         log_summary(f"```\n{traceback.format_exc()}\n```")
         sys.exit(1)
 

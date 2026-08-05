@@ -55,5 +55,5 @@ jobs:
           FLASK_ENV: testing
           TESTING: "True"
         run: |
-          python -c "from models.database import init_db; init_db()"
+          python -c "import sys, traceback; from models.database import init_db; init_db()"
           python -m unittest discover tests -v

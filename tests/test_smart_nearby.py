@@ -23,7 +23,7 @@ class TestSmartNearby(unittest.TestCase):
         except Exception:
             cls.app = None
             cls.client = None
-            return
+            raise unittest.SkipTest("MySQL or App creation not available")
 
         try:
             from models.database import get_db, init_db

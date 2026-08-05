@@ -56,4 +56,4 @@ jobs:
           FLASK_ENV: testing
           TESTING: "True"
         run: |
-          python -c "import unittest; suite = unittest.defaultTestLoader.discover('tests'); res = unittest.TextTestRunner(verbosity=2).run(suite); exit(0 if res.wasSuccessful() else 1)"
+          python -m unittest discover tests -v

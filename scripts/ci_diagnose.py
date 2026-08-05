@@ -6,14 +6,22 @@ import os
 import sys
 import traceback
 
+def log_summary(text):
+    print(text)
+    summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary_file:
+        try:
+            with open(summary_file, "a", encoding="utf-8") as f:
+                f.write(text + "\n")
+        except Exception:
+            pass
+
 def main():
-    print("==================================================")
-    print("HIDDENYATRA CI DIAGNOSTIC")
-    print("==================================================")
-    print("DB_HOST:", os.environ.get("DB_HOST"))
-    print("DB_PORT:", os.environ.get("DB_PORT"))
-    print("DB_NAME:", os.environ.get("DB_NAME"))
-    print("DB_USER:", os.environ.get("DB_USER"))
+    log_summary("### HiddenYatra CI Diagnostic Log")
+    log_summary(f"- **DB_HOST**: `{os.environ.get('DB_HOST')}`")
+    log_summary(f"- **DB_PORT**: `{os.environ.get('DB_PORT')}`")
+    log_summary(f"- **DB_NAME**: `{os.environ.get('DB_NAME')}`")
+    log_summary(f"- **DB_USER**: `{os.environ.get('DB_USER')}`")
 
     # Test 1: Direct PyMySQL connection
     try:
@@ -26,21 +34,21 @@ def main():
             database=os.environ.get("DB_NAME", "hiddenyatra_db"),
             connect_timeout=10
         )
-        print("[CHECK 1] Direct PyMySQL Connection: SUCCESS")
+        log_summary("✅ **[CHECK 1] Direct PyMySQL Connection**: SUCCESS")
         conn.close()
-    except Exception:
-        print("[CHECK 1] Direct PyMySQL Connection: FAILED")
-        traceback.print_exc()
+    except Exception as e:
+        log_summary(f"❌ **[CHECK 1] Direct PyMySQL Connection**: FAILED -> `{e}`")
+        log_summary(f"```\n{traceback.format_exc()}\n```")
         sys.exit(1)
 
     # Test 2: init_db
     try:
         from models.database import init_db
         init_db()
-        print("[CHECK 2] models.database.init_db(): SUCCESS")
-    except Exception:
-        print("[CHECK 2] models.database.init_db(): FAILED")
-        traceback.print_exc()
+        log_summary("✅ **[CHECK 2] models.database.init_db()**: SUCCESS")
+    except Exception as e:
+        log_summary(f"❌ **[CHECK 2] models.database.init_db()**: FAILED -> `{e}`")
+        log_summary(f"```\n{traceback.format_exc()}\n```")
         sys.exit(1)
 
     # Test 3: Test Discovery & Execution
@@ -50,31 +58,24 @@ def main():
         suite = loader.discover("tests")
         runner = unittest.TextTestRunner(verbosity=2)
         result = runner.run(suite)
-        print("==================================================")
-        print("TEST RESULTS summary:")
-        print("Ran:", result.testsRun)
-        print("Errors:", len(result.errors))
-        print("Failures:", len(result.failures))
-        print("Skipped:", len(result.skipped))
+        log_summary(f"📊 **TEST RESULTS**: Ran `{result.testsRun}`, Errors `{len(result.errors)}`, Failures `{len(result.failures)}`, Skipped `{len(result.skipped)}`")
 
         if result.errors:
-            print("\n--- ERRORS DETECTED ---")
+            log_summary("### ❌ ERRORS DETECTED")
             for test, err in result.errors:
-                print(f"FAILING TEST: {test}")
-                print(err)
+                log_summary(f"- **{test}**\n```\n{err}\n```")
 
         if result.failures:
-            print("\n--- FAILURES DETECTED ---")
+            log_summary("### ❌ FAILURES DETECTED")
             for test, fail in result.failures:
-                print(f"FAILING TEST: {test}")
-                print(fail)
+                log_summary(f"- **{test}**\n```\n{fail}\n```")
 
         if not result.wasSuccessful():
             sys.exit(1)
 
-    except Exception:
-        print("[CHECK 3] Test Runner Execution: FAILED")
-        traceback.print_exc()
+    except Exception as e:
+        log_summary(f"❌ **[CHECK 3] Test Runner Execution**: FAILED -> `{e}`")
+        log_summary(f"```\n{traceback.format_exc()}\n```")
         sys.exit(1)
 
 if __name__ == '__main__':

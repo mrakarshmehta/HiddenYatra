@@ -27,17 +27,21 @@ def main():
     # Test 1: Direct PyMySQL connection (with retry for CI startup delay)
     connected = False
     last_error = None
+    db_name = os.environ.get("DB_NAME", "hiddenyatra_db")
     for attempt in range(1, 16):
         try:
             import pymysql
+            # Connect to MySQL server first (without database param) to ensure server is ready
             conn = pymysql.connect(
                 host=os.environ.get("DB_HOST", "127.0.0.1"),
                 port=int(os.environ.get("DB_PORT", 3306)),
                 user=os.environ.get("DB_USER", "root"),
                 password=os.environ.get("DB_PASSWORD", "root"),
-                database=os.environ.get("DB_NAME", "hiddenyatra_db"),
                 connect_timeout=3
             )
+            cur = conn.cursor()
+            cur.execute(f"CREATE DATABASE IF NOT EXISTS `{db_name}`")
+            conn.select_db(db_name)
             conn.close()
             connected = True
             log_summary(f"✅ **[CHECK 1] Direct PyMySQL Connection**: SUCCESS (Attempt {attempt})")

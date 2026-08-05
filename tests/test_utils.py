@@ -43,6 +43,7 @@ class TestUtilsImage(unittest.TestCase):
             saved_img = Image.open(saved_path)
             self.assertEqual(saved_img.mode, 'RGB')
             self.assertLessEqual(saved_img.width, 1000)
+            saved_img.close()
 
     def test_invalid_file_returns_none(self):
         """None or empty filename should return None."""

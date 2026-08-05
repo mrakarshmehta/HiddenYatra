@@ -467,9 +467,9 @@ CREATE TABLE IF NOT EXISTS user_photos (
 -- ──────────────────────────────────────────────
 -- ADDITIONAL COMPOSITE INDEXES (Production Optimizations)
 -- ──────────────────────────────────────────────
-CREATE INDEX IF NOT EXISTS idx_places_slug_deleted ON places (slug, deleted_at);
-CREATE INDEX IF NOT EXISTS idx_places_lat_lng ON places (latitude, longitude);
-CREATE INDEX IF NOT EXISTS idx_reviews_place_created ON reviews (place_id, created_at DESC);
+CREATE INDEX idx_places_slug_deleted ON places (slug, deleted_at);
+CREATE INDEX idx_places_lat_lng ON places (latitude, longitude);
+CREATE INDEX idx_reviews_place_created ON reviews (place_id, created_at DESC);
 
 -- ──────────────────────────────────────────────
 -- 24. SAVED_ITINERARIES

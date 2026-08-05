@@ -14,9 +14,8 @@ jobs:
     services:
       mysql:
         image: mysql:8.0
-        command: --default-authentication-plugin=mysql_native_password
         env:
-          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: hiddenyatra_db
         ports:
           - 3306:3306
@@ -51,7 +50,7 @@ jobs:
           DB_PORT: 3306
           DB_NAME: hiddenyatra_db
           DB_USER: root
-          DB_PASSWORD: ""
+          DB_PASSWORD: root
           SECRET_KEY: test-ci-secret-key-for-github-actions
           ADMIN_PASSWORD: admin@hidden123
           FLASK_ENV: testing

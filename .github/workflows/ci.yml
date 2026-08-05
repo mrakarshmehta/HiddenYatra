@@ -38,7 +38,7 @@ jobs:
 
       - name: Code Syntax Check
         run: |
-          python -m py_compile app.py config.py models/*.py routes/*.py utils/*.py
+          python -m compileall app.py config.py models routes utils tests
 
       - name: Minify Static Assets Check
         run: |

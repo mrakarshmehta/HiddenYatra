@@ -57,26 +57,62 @@ def _get_pool():
                 conv = pymysql.converters.conversions.copy()
                 conv[FIELD_TYPE.DECIMAL] = float
                 conv[FIELD_TYPE.NEWDECIMAL] = float
-                _pool = PooledDB(
-                    creator=pymysql,
-                    maxconnections=DB_POOL_MAX,
-                    mincached=DB_POOL_SIZE,
-                    maxcached=DB_POOL_SIZE,
-                    blocking=True,
-                    maxusage=0,
-                    ping=1,
-                    setsession=['SET NAMES utf8mb4', 'SET SESSION wait_timeout=28800'],
-                    host=DB_HOST,
-                    port=DB_PORT,
-                    user=DB_USER,
-                    password=DB_PASSWORD,
-                    database=DB_NAME,
-                    charset=DB_CHARSET,
-                    cursorclass=DictCursor,
-                    connect_timeout=DB_TIMEOUT,
-                    autocommit=False,
-                    conv=conv,
-                )
+                try:
+                    _pool = PooledDB(
+                        creator=pymysql,
+                        maxconnections=DB_POOL_MAX,
+                        mincached=DB_POOL_SIZE,
+                        maxcached=DB_POOL_SIZE,
+                        blocking=True,
+                        maxusage=0,
+                        ping=1,
+                        setsession=['SET NAMES utf8mb4', 'SET SESSION wait_timeout=28800'],
+                        host=DB_HOST,
+                        port=DB_PORT,
+                        user=DB_USER,
+                        password=DB_PASSWORD,
+                        database=DB_NAME,
+                        charset=DB_CHARSET,
+                        cursorclass=DictCursor,
+                        connect_timeout=DB_TIMEOUT,
+                        autocommit=False,
+                        conv=conv,
+                    )
+                except pymysql.err.OperationalError as e:
+                    if e.args[0] == 1049:  # Unknown database
+                        logger.info("Database '%s' does not exist yet. Creating database...", DB_NAME)
+                        temp_conn = pymysql.connect(
+                            host=DB_HOST,
+                            port=DB_PORT,
+                            user=DB_USER,
+                            password=DB_PASSWORD,
+                            charset=DB_CHARSET
+                        )
+                        with temp_conn.cursor() as cur:
+                            cur.execute(f"CREATE DATABASE IF NOT EXISTS `{DB_NAME}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+                        temp_conn.close()
+                        _pool = PooledDB(
+                            creator=pymysql,
+                            maxconnections=DB_POOL_MAX,
+                            mincached=DB_POOL_SIZE,
+                            maxcached=DB_POOL_SIZE,
+                            blocking=True,
+                            maxusage=0,
+                            ping=1,
+                            setsession=['SET NAMES utf8mb4', 'SET SESSION wait_timeout=28800'],
+                            host=DB_HOST,
+                            port=DB_PORT,
+                            user=DB_USER,
+                            password=DB_PASSWORD,
+                            database=DB_NAME,
+                            charset=DB_CHARSET,
+                            cursorclass=DictCursor,
+                            connect_timeout=DB_TIMEOUT,
+                            autocommit=False,
+                            conv=conv,
+                        )
+                    else:
+                        raise
                 logger.info("MySQL connection pool created (size=%d, max=%d)", DB_POOL_SIZE, DB_POOL_MAX)
     return _pool
 

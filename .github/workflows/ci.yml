@@ -34,6 +34,28 @@ jobs:
         run: |
           python scripts/tools/minify_assets.py
 
+      - name: Diagnose utils module
+        run: |
+          echo "=== PWD ==="
+          pwd
+          echo "=== ls utils/ ==="
+          ls -la utils/
+          echo "=== cat utils/__init__.py ==="
+          cat utils/__init__.py
+          echo "=== Python utils module resolution ==="
+          python - <<'PY'
+          import sys
+          print("sys.path:", sys.path)
+          import utils
+          print("utils module:", utils)
+          print("utils __file__:", getattr(utils, "__file__", None))
+          print("utils members:", dir(utils))
+          print("has csrf_required:", hasattr(utils, "csrf_required"))
+          PY
+          echo "=== Check for conflicting utils packages ==="
+          pip show utils 2>&1 || echo "No pip package named 'utils' installed"
+          python -c "import importlib; spec = importlib.util.find_spec('utils'); print('utils spec:', spec); print('origin:', spec.origin if spec else 'N/A')"
+
       - name: Run Test Suite
         env:
           SECRET_KEY: test-ci-secret-key-for-github-actions

@@ -34,6 +34,15 @@ jobs:
         run: |
           python scripts/tools/minify_assets.py
 
+      - name: Verify Cover Images Integrity
+        env:
+          SECRET_KEY: test-ci-secret-key-for-github-actions
+          ADMIN_PASSWORD: admin@hidden123
+          FLASK_ENV: testing
+          TESTING: "True"
+        run: |
+          python scripts/seed/verify_cover_images.py
+
       - name: Run Test Suite
         env:
           SECRET_KEY: test-ci-secret-key-for-github-actions

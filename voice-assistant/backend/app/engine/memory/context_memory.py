@@ -14,7 +14,7 @@ class LocationContextMemory:
 
     def update_context(self, text: str):
         """Extracts location or intent updates from conversation turn."""
-        keywords = ["goa", "patna", "rajgir", "nalanda", "bodhgaya", "varanasi", "delhi", "mumbai"]
+        keywords = ["goa", "jaipur", "patna", "rajgir", "nalanda", "bodhgaya", "varanasi", "delhi", "mumbai"]
         lower_text = text.lower()
         for kw in keywords:
             if kw in lower_text:
@@ -23,6 +23,14 @@ class LocationContextMemory:
                     self.recent_searches.append(self.active_destination)
                 logger.info(f"Updated user location context for {self.user_id}: {self.active_destination}")
                 break
+
+        # Fallback regex for "to <City>" or "in <City>"
+        if not self.active_destination:
+            import re
+            match = re.search(r'\b(?:to|in|at|visiting)\s+([A-Z][a-z]+)', text)
+            if match:
+                self.active_destination = match.group(1).title()
+                self.recent_searches.append(self.active_destination)
 
     def get_context_summary(self) -> str:
         if self.active_destination:

@@ -39,7 +39,13 @@ VERIFIED_LANDMARK_IMAGES = {
     "Janaki Sthan Temple": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Janaki_Temple_Sitamarhi.jpg/1280px-Janaki_Temple_Sitamarhi.jpg",
     "Darbhanga Raj": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Darbhanga_Raj_Fort_Palace.jpg/1280px-Darbhanga_Raj_Fort_Palace.jpg",
     "Deo Sun Temple": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/Deo_Sun_Temple_Aurangabad.jpg/1280px-Deo_Sun_Temple_Aurangabad.jpg",
-    "Bhimbandh": "21_a7c0e445.jpg"
+    "Bhimbandh": "21_a7c0e445.jpg",
+    "Gandhi Maidan": "https://images.unsplash.com/photo-1519331379826-f10be5486c6f?auto=format&fit=crop&w=1200&q=80",
+    "Valmiki National Park": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
+    "Kanwar Lake": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
+    "Battle of Buxar": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Buxar_Battle_Memorial.jpg/1280px-Buxar_Battle_Memorial.jpg",
+    "Litchi Gardens": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Litchi_Fruit_Tree_Muzaffarpur.jpg/1280px-Litchi_Fruit_Tree_Muzaffarpur.jpg",
+    "Veer Kunwar Singh": "https://images.unsplash.com/photo-1582510003544-4d00b7f74220?auto=format&fit=crop&w=1200&q=80"
 }
 
 def apply_verified_photos():
@@ -67,9 +73,10 @@ def apply_verified_photos():
                     updated_verified += 1
                     print(f"  [VERIFIED PHOTO] {pname} -> {photo}")
                 else:
-                    cur.execute("UPDATE places SET cover_image = '' WHERE id = %s", (p['id'],))
+                    # NEVER wipe out an existing cover_image; only set SVG fallback if cover_image is currently NULL or empty
+                    cur.execute("UPDATE places SET cover_image = '' WHERE id = %s AND (cover_image IS NULL OR cover_image = '')", (p['id'],))
                     updated_svg_fallback += 1
-                    print(f"  [CUSTOM SVG FALLBACK] {pname} -> (using custom category SVG vector graphic)")
+                    print(f"  [PRESERVED / SVG FALLBACK] {pname}")
 
             conn.commit()
             print(f"\nCompleted! Verified photos set for {updated_verified} places. Custom SVG banners set for {updated_svg_fallback} places.")

@@ -90,31 +90,38 @@ def get_districts_by_state(state_id):
         return cur.fetchall()
 
 
-def create_district(state_id, name, description='', famous_for=''):
+def create_district(state_id, name, description='', famous_for='', cover_image='', image_url=''):
     slug = slugify(name)
     conn = get_db()
     try:
         cur = conn.cursor()
         try:
             cur.execute(
-                "INSERT INTO districts (state_id, name, slug, description, famous_for) VALUES (%s, %s, %s, %s, %s)",
-                (state_id, name, slug, description, famous_for)
+                "INSERT INTO districts (state_id, name, slug, description, famous_for, cover_image, image_url) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                (state_id, name, slug, description, famous_for, cover_image, image_url)
             )
             conn.commit()
             did = cur.lastrowid
         except pymysql.IntegrityError:
             conn.rollback()
             cur.execute(
-                "SELECT id FROM districts WHERE state_id = %s AND slug = %s", (state_id, slug)
+                "SELECT id, cover_image FROM districts WHERE state_id = %s AND slug = %s", (state_id, slug)
             )
             row = cur.fetchone()
             did = row['id'] if row else None
-            if did and (description or famous_for):
+            if did:
                 try:
-                    cur.execute(
-                        "UPDATE districts SET description = COALESCE(NULLIF(%s, ''), description), famous_for = COALESCE(NULLIF(%s, ''), famous_for) WHERE id = %s",
-                        (description, famous_for, did)
-                    )
+                    # Never overwrite an existing cover_image with an empty string
+                    if cover_image:
+                        cur.execute(
+                            "UPDATE districts SET description = COALESCE(NULLIF(%s, ''), description), famous_for = COALESCE(NULLIF(%s, ''), famous_for), cover_image = %s WHERE id = %s",
+                            (description, famous_for, cover_image, did)
+                        )
+                    else:
+                        cur.execute(
+                            "UPDATE districts SET description = COALESCE(NULLIF(%s, ''), description), famous_for = COALESCE(NULLIF(%s, ''), famous_for) WHERE id = %s",
+                            (description, famous_for, did)
+                        )
                     conn.commit()
                 except Exception:
                     conn.rollback()

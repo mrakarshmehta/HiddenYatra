@@ -11,6 +11,16 @@ jobs:
     name: Build & Test
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: hiddenyatra_db
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=10
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -20,11 +30,6 @@ jobs:
         with:
           python-version: "3.11"
           cache: 'pip'
-
-      - name: Start MySQL Database
-        run: |
-          sudo service mysql start
-          sudo mysql -e "CREATE DATABASE IF NOT EXISTS hiddenyatra_db; CREATE USER IF NOT EXISTS 'root'@'127.0.0.1' IDENTIFIED BY 'root'; GRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1'; ALTER USER 'root'@'localhost' IDENTIFIED BY 'root'; FLUSH PRIVILEGES;"
 
       - name: Install Dependencies
         run: |

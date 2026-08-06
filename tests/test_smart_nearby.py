@@ -61,7 +61,7 @@ class TestSmartNearby(unittest.TestCase):
                 (1, 'CI Test Hotel', 'hotel', 'Patna', 25.5945, 85.1378),
                 (1, 'CI Test Hospital', 'hospital', 'Patna', 25.5950, 85.1380),
                 (1, 'CI Test Petrol Pump', 'petrol_pump', 'Patna', 25.5955, 85.1382),
-                (1, 'CI Test Pharmacy', 'pharmacy', 'Patna', 25.5960, 85.1384),
+                (1, 'CI Test Medical Store', 'medical_store', 'Patna', 25.5960, 85.1384),
                 (1, 'CI Test Restaurant', 'restaurant', 'Patna', 25.5965, 85.1386),
                 (1, 'CI Test ATM', 'atm', 'Patna', 25.5970, 85.1388),
                 (1, 'CI Test Police Station', 'police_station', 'Patna', 25.5975, 85.1390),

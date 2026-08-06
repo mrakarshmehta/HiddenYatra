@@ -271,7 +271,7 @@
       <div class="gallery-grid" id="gallery">
         {% for photo in photos %}
         <div class="gallery-item" data-index="{{ loop.index0 }}">
-          <img src="{{ url_for('static', filename='uploads/places/' + photo.filename) }}"
+          <img src="{% if photo.filename.startswith('http') %}{{ photo.filename }}{% else %}{{ url_for('static', filename='uploads/places/' + photo.filename) }}{% endif %}"
                alt="{{ photo.caption or place.name }}" loading="lazy" onerror="this.onerror=null;this.src='/static/placeholder-place.svg';">
           {% if photo.caption %}
           <span class="gallery-caption">{{ photo.caption }}</span>
@@ -291,7 +291,7 @@
       <div class="gallery-grid" style="margin-bottom:var(--space-lg);">
         {% for up in user_photos %}
         <div class="gallery-item" data-index="{{ loop.index0 + (photos | length) }}">
-          <img src="{{ url_for('static', filename='uploads/places/' + up.filename) }}"
+          <img src="{% if up.filename.startswith('http') %}{{ up.filename }}{% else %}{{ url_for('static', filename='uploads/places/' + up.filename) }}{% endif %}"
                alt="{{ up.caption or place.name }}" loading="lazy" onerror="this.onerror=null;this.src='/static/placeholder-place.svg';">
           <span class="gallery-caption">📷 {{ up.uploader_name }} • {{ up.created_at.strftime('%Y-%m-%d') if up.created_at else '' }}</span>
         </div>

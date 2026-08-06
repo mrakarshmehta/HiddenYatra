@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" fill="none">
+  <rect width="800" height="600" fill="url(#bg_grad)"/>
+  <defs>
+    <linearGradient id="bg_grad" x1="0" y1="0" x2="800" y2="600" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#1E293B"/>
+    </linearGradient>
+  </defs>
+  <circle cx="400" cy="270" r="80" fill="#38BDF8" fill-opacity="0.15"/>
+  <path d="M400 210C366.863 210 340 236.863 340 270C340 315 400 370 400 370C400 370 460 315 460 270C460 236.863 433.137 210 400 210ZM400 295C386.193 295 375 283.807 375 270C375 256.193 386.193 245 400 245C413.807 245 425 256.193 425 270C425 283.807 413.807 295 400 295Z" fill="#38BDF8"/>
+  <text x="400" y="420" text-anchor="middle" fill="#94A3B8" font-family="system-ui, sans-serif" font-size="22" font-weight="600" letter-spacing="1">HIDDENYATRA DESTINATION</text>
+</svg>

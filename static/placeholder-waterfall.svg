@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" fill="none">
+  <rect width="800" height="600" fill="url(#wf_grad)"/>
+  <defs>
+    <linearGradient id="wf_grad" x1="0" y1="0" x2="800" y2="600" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#064E3B"/>
+      <stop offset="1" stop-color="#022C22"/>
+    </linearGradient>
+  </defs>
+  <path d="M360 160C360 160 370 260 370 360H430C430 260 440 160 440 160H360Z" fill="#38BDF8" fill-opacity="0.85"/>
+  <ellipse cx="400" cy="360" rx="90" ry="25" fill="#38BDF8" fill-opacity="0.4"/>
+  <text x="400" y="430" text-anchor="middle" fill="#6EE7B7" font-family="system-ui, sans-serif" font-size="22" font-weight="600" letter-spacing="1">SCENIC WATERFALL</text>
+</svg>

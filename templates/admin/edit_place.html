@@ -320,7 +320,7 @@
   <div class="edit-photos-grid" style="margin-bottom:var(--space-lg);">
     {% for photo in photos %}
     <div class="edit-photo-item {% if place.cover_image == photo.filename %}is-cover{% endif %}">
-      <img src="{{ url_for('static', filename='uploads/places/' + photo.filename) }}" alt="{{ photo.caption or '' }}">
+      <img src="{% if photo.filename.startswith('http') %}{{ photo.filename }}{% else %}{{ url_for('static', filename='uploads/places/' + photo.filename) }}{% endif %}" alt="{{ photo.caption or '' }}">
       <div class="edit-photo-actions">
         <form method="POST" action="{{ url_for('admin.set_cover_image', place_id=place.id) }}" style="display:inline;">
 {{ csrf_input() }}

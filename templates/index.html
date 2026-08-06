@@ -380,9 +380,9 @@
   <div class="hero-slideshow effect-{{ hero_settings.transition_effect if hero_settings else 'kenburns' }}" id="hero-slideshow">
     {% if hero_media %}
       {% for item in hero_media %}
-      <div class="hero-slide {% if loop.first %}active{% endif %}" {% if item.media_type == 'image' %}style="background-image:url('/static/hero/{{ item.filename }}')"{% endif %}>
+      <div class="hero-slide {% if loop.first %}active{% endif %}" {% if item.media_type == 'image' %}style="background-image:url('{% if item.filename.startswith('http') %}{{ item.filename }}{% elif item.filename.startswith('hero/') %}/static/{{ item.filename }}{% else %}/static/hero/{{ item.filename }}{% endif %}')"{% endif %}>
         {% if item.media_type == 'video' %}
-        <video autoplay muted loop playsinline style="width:100%;height:100%;object-fit:cover;"><source src="/static/hero/{{ item.filename }}" type="video/mp4"></video>
+        <video autoplay muted loop playsinline style="width:100%;height:100%;object-fit:cover;"><source src="{% if item.filename.startswith('http') %}{{ item.filename }}{% elif item.filename.startswith('hero/') %}/static/{{ item.filename }}{% else %}/static/hero/{{ item.filename }}{% endif %}" type="video/mp4"></video>
         {% endif %}
       </div>
       {% endfor %}

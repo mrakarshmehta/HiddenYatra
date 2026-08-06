@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" fill="none">
+  <rect width="800" height="600" fill="url(#nat_grad)"/>
+  <defs>
+    <linearGradient id="nat_grad" x1="0" y1="0" x2="800" y2="600" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#065F46"/>
+      <stop offset="1" stop-color="#064E3B"/>
+    </linearGradient>
+  </defs>
+  <path d="M400 180L460 290H340L400 180Z" fill="#10B981"/>
+  <path d="M400 240L480 360H320L400 240Z" fill="#059669"/>
+  <text x="400" y="420" text-anchor="middle" fill="#A7F3D0" font-family="system-ui, sans-serif" font-size="22" font-weight="600" letter-spacing="1">NATURE &amp; WILDLIFE SANCTUARY</text>
+</svg>

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" fill="none">
+  <rect width="800" height="600" fill="url(#temple_grad)"/>
+  <defs>
+    <linearGradient id="temple_grad" x1="0" y1="0" x2="800" y2="600" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1E1B4B"/>
+      <stop offset="1" stop-color="#311B92"/>
+    </linearGradient>
+  </defs>
+  <path d="M400 160L460 240H340L400 160Z" fill="#F59E0B"/>
+  <rect x="360" y="240" width="80" height="120" rx="4" fill="#F59E0B" fill-opacity="0.8"/>
+  <path d="M380 360V310C380 298.954 388.954 290 400 290C411.046 290 420 298.954 420 310V360H380Z" fill="#1E1B4B"/>
+  <text x="400" y="420" text-anchor="middle" fill="#C7D2FE" font-family="system-ui, sans-serif" font-size="22" font-weight="600" letter-spacing="1">HERITAGE TEMPLE</text>
+</svg>

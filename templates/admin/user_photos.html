@@ -50,7 +50,7 @@
   <div class="photo-mod-grid">
     {% for photo in photos %}
     <div class="photo-mod-card">
-      <img class="photo-mod-img" src="{{ url_for('static', filename='uploads/places/' + photo.filename) }}" alt="{{ photo.caption or 'User photo' }}">
+      <img class="photo-mod-img" src="{% if photo.filename.startswith('http') %}{{ photo.filename }}{% else %}{{ url_for('static', filename='uploads/places/' + photo.filename) }}{% endif %}" alt="{{ photo.caption or 'User photo' }}">
       <div class="photo-mod-body">
         <div class="photo-mod-place">
           <a href="{{ url_for('places.place_detail', slug=photo.place_slug) }}" style="color:inherit;">{{ photo.place_name }}</a>

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" fill="none">
+  <rect width="800" height="600" fill="url(#fort_grad)"/>
+  <defs>
+    <linearGradient id="fort_grad" x1="0" y1="0" x2="800" y2="600" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2D1B69"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+  </defs>
+  <path d="M300 220H330V240H370V220H400V240H430V220H470V240H500V360H300V220Z" fill="#EC4899" fill-opacity="0.85"/>
+  <path d="M370 360V300C370 283.431 383.431 270 400 270C416.569 270 430 283.431 430 300V360H370Z" fill="#111827"/>
+  <text x="400" y="420" text-anchor="middle" fill="#F472B6" font-family="system-ui, sans-serif" font-size="22" font-weight="600" letter-spacing="1">HISTORIC FORT &amp; MONUMENT</text>
+</svg>

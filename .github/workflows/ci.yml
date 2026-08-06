@@ -24,9 +24,7 @@ jobs:
       - name: Start MySQL Database
         run: |
           sudo systemctl start mysql.service
-          sudo mysql -e "CREATE DATABASE IF NOT EXISTS hiddenyatra_db;"
-          sudo mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'root'; FLUSH PRIVILEGES;"
-          sudo mysql -e "CREATE USER IF NOT EXISTS 'root'@'127.0.0.1' IDENTIFIED BY 'root'; GRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1'; FLUSH PRIVILEGES;"
+          sudo mysql -e "CREATE DATABASE IF NOT EXISTS hiddenyatra_db; CREATE USER IF NOT EXISTS 'root'@'127.0.0.1' IDENTIFIED BY 'root'; GRANT ALL PRIVILEGES ON *.* TO 'root'@'127.0.0.1'; ALTER USER 'root'@'localhost' IDENTIFIED BY 'root'; FLUSH PRIVILEGES;"
 
       - name: Install Dependencies
         run: |

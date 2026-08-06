@@ -48,3 +48,5 @@ scratch/
 
 # Temp/test files
 _*.py
+!__init__.py
+!**/__init__.py
